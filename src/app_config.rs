@@ -14,6 +14,8 @@ pub struct AppConfig {
     pub defaults: DefaultsConfig,
     /// Display preferences.
     pub display:  DisplayConfig,
+    /// Agent backend configuration.
+    pub agent:    crate::agent::AgentConfig,
 }
 
 /// Default values applied when creating new applications.
