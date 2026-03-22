@@ -1,4 +1,4 @@
-# {{project-name}}
+# tenki
 
 set dotenv-load := true
 
@@ -52,13 +52,13 @@ test *ARGS:
 build:
     cargo build
     mkdir -p bin
-    cp target/debug/{{project-name}} bin/{{project-name}}
+    cp target/debug/tenki bin/tenki
 
 # Build release binary
 build-release:
     cargo build --release
     mkdir -p bin
-    cp target/release/{{project-name}} bin/{{project-name}}
+    cp target/release/tenki bin/tenki
 
 # ─── Pre-commit ──────────────────────────────────────────────────────
 

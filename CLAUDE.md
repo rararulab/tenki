@@ -1,11 +1,11 @@
-# CLAUDE.md — {{project-name}} Development Guide
+# CLAUDE.md — tenki Development Guide
 
 ## Communication
 - 用中文与用户交流
 
 ## Project Identity
 
-{{project-name}} is a CLI tool built in Rust. TODO: describe your project here.
+tenki is a job application tracker CLI with full lifecycle management, agent-native JSON output, and resume tailoring integration. Data stored in SQLite at ~/.tenki/tenki.db.
 
 ## Development Workflow
 
