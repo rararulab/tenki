@@ -2,7 +2,8 @@ use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
 use crate::{
-    db::{AppStatus, Database, JobLevel, JobType, Outcome, Stage},
+    db::Database,
+    domain::{AppStatus, JobLevel, JobType, Outcome, Stage},
     error::{self, Result},
 };
 

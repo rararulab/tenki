@@ -7,7 +7,7 @@ pub mod task;
 
 use clap::{Parser, Subcommand};
 
-use crate::db::{
+use crate::domain::{
     AppStatus, InterviewOutcome, InterviewStatus, InterviewType, JobLevel, JobType, Outcome, Stage,
     TaskType,
 };

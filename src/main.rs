@@ -1,6 +1,7 @@
 mod app_config;
 mod cli;
 mod db;
+mod domain;
 mod error;
 mod http;
 mod paths;

@@ -2,7 +2,8 @@ use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
 use crate::{
-    db::{Database, InterviewOutcome, InterviewStatus, InterviewType},
+    db::Database,
+    domain::{InterviewOutcome, InterviewStatus, InterviewType},
     error::{self, Result},
 };
 

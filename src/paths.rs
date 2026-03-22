@@ -15,11 +15,14 @@ static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// first access via `OnceLock`.
 pub fn data_dir() -> &'static Path {
     DATA_DIR.get_or_init(|| {
-        env::var("TENKI_DATA_DIR").map(PathBuf::from).unwrap_or_else(|_| {
-            dirs::home_dir()
-                .expect("home directory must be resolvable")
-                .join(".tenki")
-        })
+        env::var("TENKI_DATA_DIR").map_or_else(
+            |_| {
+                dirs::home_dir()
+                    .expect("home directory must be resolvable")
+                    .join(".tenki")
+            },
+            PathBuf::from,
+        )
     })
 }
 
