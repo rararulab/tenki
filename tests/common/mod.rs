@@ -1,5 +1,7 @@
 //! Shared test helpers for integration tests.
 
+#![allow(dead_code)]
+
 use assert_cmd::Command;
 use tempfile::TempDir;
 
@@ -11,7 +13,7 @@ pub fn tenki_cmd() -> (Command, TempDir) {
     (cmd, tmp)
 }
 
-/// Initialize a temp DB and return the TempDir for reuse.
+/// Initialize a temp DB and return the `TempDir` for reuse.
 pub fn tenki_initialized() -> TempDir {
     let (mut cmd, tmp) = tenki_cmd();
     cmd.arg("init").assert().success();
