@@ -9,5 +9,6 @@ pub use enums::{
     AppStatus, InterviewOutcome, InterviewStatus, InterviewType, JobLevel, JobType, Outcome, Stage,
     TaskType,
 };
+pub(crate) use models::ApplicationRow;
 pub use models::{Application, InterviewRow, StageEvent, Stats, StatusChange, TaskRow};
 pub use params::{AddApplicationParams, ListApplicationParams, UpdateApplicationParams};
