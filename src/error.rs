@@ -14,10 +14,6 @@ pub enum TenkiError {
     #[snafu(display("IO error: {source}"))]
     Io { source: std::io::Error },
 
-    #[allow(dead_code)]
-    #[snafu(display("HTTP error: {source}"))]
-    Http { source: reqwest::Error },
-
     #[snafu(display("JSON error: {source}"))]
     Json { source: serde_json::Error },
 

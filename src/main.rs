@@ -1,13 +1,14 @@
 mod app_config;
 mod cli;
 mod db;
+mod domain;
 mod error;
-mod http;
 mod paths;
 mod store;
 
 use clap::Parser;
 use cli::{AppCommand, Cli, Command, InterviewCommand, StageCommand, TaskCommand};
+use domain::{AddApplicationParams, ListApplicationParams, UpdateApplicationParams};
 
 #[tokio::main]
 async fn main() {
@@ -59,24 +60,23 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 notes,
                 json,
             } => {
-                cli::app::add(
-                    &db,
-                    &company,
-                    &position,
-                    jd_url.as_deref(),
-                    jd_text.as_deref(),
-                    location.as_deref(),
-                    status,
-                    salary.as_deref(),
-                    job_type,
-                    job_level,
-                    is_remote,
-                    source.as_deref(),
-                    company_url.as_deref(),
-                    notes.as_deref(),
-                    json,
-                )
-                .await?;
+                let remote = if is_remote { Some(true) } else { None };
+                let params = AddApplicationParams::builder()
+                    .company(&company)
+                    .position(&position)
+                    .maybe_jd_url(jd_url.as_deref())
+                    .maybe_jd_text(jd_text.as_deref())
+                    .maybe_location(location.as_deref())
+                    .status(status)
+                    .maybe_salary(salary.as_deref())
+                    .maybe_job_type(job_type)
+                    .maybe_job_level(job_level)
+                    .maybe_is_remote(remote)
+                    .maybe_source(source.as_deref())
+                    .maybe_company_url(company_url.as_deref())
+                    .maybe_notes(notes.as_deref())
+                    .build();
+                cli::app::add(&db, &params, json).await?;
             }
             AppCommand::List {
                 status,
@@ -86,16 +86,14 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 source,
                 json,
             } => {
-                cli::app::list(
-                    &db,
-                    status,
-                    company.as_deref(),
-                    outcome,
-                    stage,
-                    source.as_deref(),
-                    json,
-                )
-                .await?;
+                let params = ListApplicationParams::builder()
+                    .maybe_status(status)
+                    .maybe_company(company.as_deref())
+                    .maybe_outcome(outcome)
+                    .maybe_stage(stage)
+                    .maybe_source(source.as_deref())
+                    .build();
+                cli::app::list(&db, &params, json).await?;
             }
             AppCommand::Show { id, json } => {
                 cli::app::show(&db, &id, json).await?;
@@ -118,26 +116,22 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 notes,
                 json,
             } => {
-                cli::app::update(
-                    &db,
-                    &id,
-                    status,
-                    outcome,
-                    stage,
-                    company.as_deref(),
-                    position.as_deref(),
-                    location.as_deref(),
-                    jd_url.as_deref(),
-                    jd_text.as_deref(),
-                    salary.as_deref(),
-                    job_type,
-                    job_level,
-                    is_remote,
-                    source.as_deref(),
-                    notes.as_deref(),
-                    json,
-                )
-                .await?;
+                let job_type_str = job_type.map(|v| v.as_str().to_string());
+                let job_level_str = job_level.map(|v| v.as_str().to_string());
+                let params = UpdateApplicationParams::builder()
+                    .maybe_company(company.as_deref())
+                    .maybe_position(position.as_deref())
+                    .maybe_location(location.as_deref())
+                    .maybe_jd_url(jd_url.as_deref())
+                    .maybe_jd_text(jd_text.as_deref())
+                    .maybe_salary(salary.as_deref())
+                    .maybe_job_type(job_type_str.as_deref())
+                    .maybe_job_level(job_level_str.as_deref())
+                    .maybe_is_remote(is_remote)
+                    .maybe_source(source.as_deref())
+                    .maybe_notes(notes.as_deref())
+                    .build();
+                cli::app::update(&db, &id, status, outcome, stage, &params, json).await?;
             }
             AppCommand::Delete { id, json } => {
                 cli::app::delete(&db, &id, json).await?;

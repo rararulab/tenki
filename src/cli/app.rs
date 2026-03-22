@@ -2,46 +2,17 @@ use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
 use crate::{
-    db::{AppStatus, Database, JobLevel, JobType, Outcome, Stage},
+    db::Database,
+    domain::{
+        AddApplicationParams, AppStatus, ListApplicationParams, Outcome, Stage,
+        UpdateApplicationParams,
+    },
     error::{self, Result},
 };
 
-#[allow(clippy::too_many_arguments)]
-pub async fn add(
-    db: &Database,
-    company: &str,
-    position: &str,
-    jd_url: Option<&str>,
-    jd_text: Option<&str>,
-    location: Option<&str>,
-    status: AppStatus,
-    salary: Option<&str>,
-    job_type: Option<JobType>,
-    job_level: Option<JobLevel>,
-    is_remote: bool,
-    source: Option<&str>,
-    company_url: Option<&str>,
-    notes: Option<&str>,
-    json: bool,
-) -> Result<()> {
-    let remote = if is_remote { Some(true) } else { None };
-    let id = db
-        .add_application(
-            company,
-            position,
-            jd_url,
-            jd_text,
-            location,
-            status,
-            salary,
-            job_type,
-            job_level,
-            remote,
-            source,
-            company_url,
-            notes,
-        )
-        .await?;
+/// Create a new job application from the given parameters.
+pub async fn add(db: &Database, params: &AddApplicationParams<'_>, json: bool) -> Result<()> {
+    let id = db.add_application(params).await?;
     if json {
         let out = serde_json::json!({ "id": id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
@@ -51,18 +22,9 @@ pub async fn add(
     Ok(())
 }
 
-pub async fn list(
-    db: &Database,
-    status: Option<AppStatus>,
-    company: Option<&str>,
-    outcome: Option<Outcome>,
-    stage: Option<Stage>,
-    source: Option<&str>,
-    json: bool,
-) -> Result<()> {
-    let apps = db
-        .list_applications(status, company, outcome, stage, source)
-        .await?;
+/// List applications matching the given filters.
+pub async fn list(db: &Database, params: &ListApplicationParams<'_>, json: bool) -> Result<()> {
+    let apps = db.list_applications(params).await?;
     if json {
         println!(
             "{}",
@@ -157,24 +119,14 @@ pub async fn show(db: &Database, id: &str, json: bool) -> Result<()> {
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+/// Update an existing application's status, outcome, stage, and/or fields.
 pub async fn update(
     db: &Database,
     id: &str,
     status: Option<AppStatus>,
     outcome: Option<Outcome>,
     stage: Option<Stage>,
-    company: Option<&str>,
-    position: Option<&str>,
-    location: Option<&str>,
-    jd_url: Option<&str>,
-    jd_text: Option<&str>,
-    salary: Option<&str>,
-    job_type: Option<JobType>,
-    job_level: Option<JobLevel>,
-    is_remote: Option<bool>,
-    source: Option<&str>,
-    notes: Option<&str>,
+    params: &UpdateApplicationParams<'_>,
     json: bool,
 ) -> Result<()> {
     let full_id = db.resolve_app_id(id).await?;
@@ -187,30 +139,7 @@ pub async fn update(
     if let Some(st) = stage {
         db.update_application_stage(&full_id, st, None).await?;
     }
-    let job_type_str = job_type.map(|v| v.as_str().to_string());
-    let job_level_str = job_level.map(|v| v.as_str().to_string());
-    db.update_application_fields(
-        &full_id,
-        company,
-        position,
-        location,
-        jd_url,
-        jd_text,
-        salary,
-        job_type_str.as_deref(),
-        job_level_str.as_deref(),
-        is_remote,
-        None, // skills
-        None, // experience_range
-        source,
-        None, // company_url
-        notes,
-        None, // tailored_summary
-        None, // tailored_headline
-        None, // tailored_skills
-        None, // applied_at
-    )
-    .await?;
+    db.update_application_fields(&full_id, params).await?;
     if json {
         let app = db.get_application(&full_id).await?;
         println!("{}", serde_json::to_string(&app).context(error::JsonSnafu)?);

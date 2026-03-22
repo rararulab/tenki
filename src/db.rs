@@ -1,505 +1,20 @@
 //! Domain-level database operations.
 
-use std::{fmt, path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
-use serde::Serialize;
 use snafu::ResultExt as _;
 use sqlx::SqlitePool;
 
 use crate::{
+    domain::{
+        AddApplicationParams, AppStatus, Application, InterviewOutcome, InterviewRow,
+        InterviewStatus, InterviewType, ListApplicationParams, Outcome, Stage, StageEvent, Stats,
+        StatusChange, TaskRow, TaskType, UpdateApplicationParams,
+    },
     error::{self, Result, TenkiError},
     paths,
     store::{DBStore, DatabaseConfig},
 };
-
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum AppStatus {
-    Bookmarked,
-    Applied,
-    Screening,
-    Interview,
-    Offer,
-    Accepted,
-    Rejected,
-    Withdrawn,
-}
-
-impl AppStatus {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Bookmarked => "bookmarked",
-            Self::Applied => "applied",
-            Self::Screening => "screening",
-            Self::Interview => "interview",
-            Self::Offer => "offer",
-            Self::Accepted => "accepted",
-            Self::Rejected => "rejected",
-            Self::Withdrawn => "withdrawn",
-        }
-    }
-}
-
-impl fmt::Display for AppStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for AppStatus {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "bookmarked" => Ok(Self::Bookmarked),
-            "applied" => Ok(Self::Applied),
-            "screening" => Ok(Self::Screening),
-            "interview" => Ok(Self::Interview),
-            "offer" => Ok(Self::Offer),
-            "accepted" => Ok(Self::Accepted),
-            "rejected" => Ok(Self::Rejected),
-            "withdrawn" => Ok(Self::Withdrawn),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum InterviewType {
-    Phone,
-    Technical,
-    Behavioral,
-    #[clap(name = "system-design")]
-    SystemDesign,
-    Hr,
-    Other,
-}
-
-impl InterviewType {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Phone => "phone",
-            Self::Technical => "technical",
-            Self::Behavioral => "behavioral",
-            Self::SystemDesign => "system-design",
-            Self::Hr => "hr",
-            Self::Other => "other",
-        }
-    }
-}
-
-impl fmt::Display for InterviewType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum InterviewStatus {
-    Scheduled,
-    Completed,
-    Cancelled,
-}
-
-impl InterviewStatus {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Scheduled => "scheduled",
-            Self::Completed => "completed",
-            Self::Cancelled => "cancelled",
-        }
-    }
-}
-
-impl fmt::Display for InterviewStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-// --- New enums ---
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Outcome {
-    #[clap(name = "offer-accepted")]
-    OfferAccepted,
-    #[clap(name = "offer-declined")]
-    OfferDeclined,
-    Rejected,
-    Withdrawn,
-    #[clap(name = "no-response")]
-    NoResponse,
-    Ghosted,
-}
-
-impl Outcome {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::OfferAccepted => "offer_accepted",
-            Self::OfferDeclined => "offer_declined",
-            Self::Rejected => "rejected",
-            Self::Withdrawn => "withdrawn",
-            Self::NoResponse => "no_response",
-            Self::Ghosted => "ghosted",
-        }
-    }
-}
-
-impl fmt::Display for Outcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for Outcome {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "offer_accepted" => Ok(Self::OfferAccepted),
-            "offer_declined" => Ok(Self::OfferDeclined),
-            "rejected" => Ok(Self::Rejected),
-            "withdrawn" => Ok(Self::Withdrawn),
-            "no_response" => Ok(Self::NoResponse),
-            "ghosted" => Ok(Self::Ghosted),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Stage {
-    Applied,
-    #[clap(name = "recruiter-screen")]
-    RecruiterScreen,
-    Assessment,
-    #[clap(name = "hiring-manager")]
-    HiringManager,
-    Technical,
-    Onsite,
-    Offer,
-    Closed,
-}
-
-impl Stage {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Applied => "applied",
-            Self::RecruiterScreen => "recruiter_screen",
-            Self::Assessment => "assessment",
-            Self::HiringManager => "hiring_manager",
-            Self::Technical => "technical",
-            Self::Onsite => "onsite",
-            Self::Offer => "offer",
-            Self::Closed => "closed",
-        }
-    }
-}
-
-impl fmt::Display for Stage {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for Stage {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "applied" => Ok(Self::Applied),
-            "recruiter_screen" => Ok(Self::RecruiterScreen),
-            "assessment" => Ok(Self::Assessment),
-            "hiring_manager" => Ok(Self::HiringManager),
-            "technical" => Ok(Self::Technical),
-            "onsite" => Ok(Self::Onsite),
-            "offer" => Ok(Self::Offer),
-            "closed" => Ok(Self::Closed),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum JobType {
-    #[clap(name = "full-time")]
-    FullTime,
-    #[clap(name = "part-time")]
-    PartTime,
-    Contract,
-    Internship,
-}
-
-impl JobType {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::FullTime => "full_time",
-            Self::PartTime => "part_time",
-            Self::Contract => "contract",
-            Self::Internship => "internship",
-        }
-    }
-}
-
-impl fmt::Display for JobType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for JobType {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "full_time" => Ok(Self::FullTime),
-            "part_time" => Ok(Self::PartTime),
-            "contract" => Ok(Self::Contract),
-            "internship" => Ok(Self::Internship),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum JobLevel {
-    Junior,
-    Mid,
-    Senior,
-    Lead,
-    Staff,
-    Principal,
-}
-
-impl JobLevel {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Junior => "junior",
-            Self::Mid => "mid",
-            Self::Senior => "senior",
-            Self::Lead => "lead",
-            Self::Staff => "staff",
-            Self::Principal => "principal",
-        }
-    }
-}
-
-impl fmt::Display for JobLevel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for JobLevel {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "junior" => Ok(Self::Junior),
-            "mid" => Ok(Self::Mid),
-            "senior" => Ok(Self::Senior),
-            "lead" => Ok(Self::Lead),
-            "staff" => Ok(Self::Staff),
-            "principal" => Ok(Self::Principal),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskType {
-    Prep,
-    Todo,
-    #[clap(name = "follow-up")]
-    FollowUp,
-    #[clap(name = "check-status")]
-    CheckStatus,
-}
-
-impl TaskType {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Prep => "prep",
-            Self::Todo => "todo",
-            Self::FollowUp => "follow_up",
-            Self::CheckStatus => "check_status",
-        }
-    }
-}
-
-impl fmt::Display for TaskType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for TaskType {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "prep" => Ok(Self::Prep),
-            "todo" => Ok(Self::Todo),
-            "follow_up" => Ok(Self::FollowUp),
-            "check_status" => Ok(Self::CheckStatus),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum InterviewOutcome {
-    Pass,
-    Fail,
-    Pending,
-    Cancelled,
-}
-
-impl InterviewOutcome {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Pass => "pass",
-            Self::Fail => "fail",
-            Self::Pending => "pending",
-            Self::Cancelled => "cancelled",
-        }
-    }
-}
-
-impl fmt::Display for InterviewOutcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
-}
-
-impl FromStr for InterviewOutcome {
-    type Err = TenkiError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "pass" => Ok(Self::Pass),
-            "fail" => Ok(Self::Fail),
-            "pending" => Ok(Self::Pending),
-            "cancelled" => Ok(Self::Cancelled),
-            other => Err(TenkiError::InvalidStatus {
-                status: other.to_string(),
-            }),
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Domain structs
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Application {
-    pub id:                String,
-    pub company:           String,
-    pub position:          String,
-    pub jd_url:            Option<String>,
-    pub jd_text:           Option<String>,
-    pub location:          Option<String>,
-    pub status:            String,
-    pub stage:             Option<String>,
-    pub outcome:           Option<String>,
-    pub fitness_score:     Option<f64>,
-    pub fitness_notes:     Option<String>,
-    pub resume_typ:        Option<String>,
-    pub has_resume_pdf:    bool,
-    pub salary:            Option<String>,
-    pub salary_min:        Option<f64>,
-    pub salary_max:        Option<f64>,
-    pub salary_currency:   Option<String>,
-    pub job_type:          Option<String>,
-    pub is_remote:         Option<bool>,
-    pub job_level:         Option<String>,
-    pub skills:            Option<String>,
-    pub experience_range:  Option<String>,
-    pub source:            Option<String>,
-    pub company_url:       Option<String>,
-    pub notes:             Option<String>,
-    pub tailored_summary:  Option<String>,
-    pub tailored_headline: Option<String>,
-    pub tailored_skills:   Option<String>,
-    pub applied_at:        Option<String>,
-    pub closed_at:         Option<String>,
-    pub created_at:        String,
-    pub updated_at:        String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct InterviewRow {
-    pub id:             String,
-    pub application_id: String,
-    pub round:          i64,
-    pub r#type:         String,
-    pub interviewer:    Option<String>,
-    pub scheduled_at:   Option<String>,
-    pub status:         String,
-    pub questions:      Option<String>,
-    pub notes:          Option<String>,
-    pub outcome:        Option<String>,
-    pub duration_mins:  Option<i64>,
-    pub created_at:     String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TaskRow {
-    pub id:             String,
-    pub application_id: String,
-    pub r#type:         String,
-    pub title:          String,
-    pub due_date:       Option<String>,
-    pub is_completed:   bool,
-    pub notes:          Option<String>,
-    pub created_at:     String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct StageEvent {
-    pub id:             String,
-    pub application_id: String,
-    pub from_stage:     Option<String>,
-    pub to_stage:       String,
-    pub occurred_at:    String,
-    pub metadata:       Option<String>,
-    pub created_at:     String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct StatusChange {
-    pub from_status: String,
-    pub to_status:   String,
-    pub note:        Option<String>,
-    pub created_at:  String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Stats {
-    pub total:               usize,
-    pub by_status:           Vec<(String, usize)>,
-    pub by_outcome:          Vec<(String, usize)>,
-    pub by_stage:            Vec<(String, usize)>,
-    pub by_source:           Vec<(String, usize)>,
-    pub pending_tasks:       usize,
-    pub upcoming_interviews: usize,
-}
 
 // ---------------------------------------------------------------------------
 // Database
@@ -683,27 +198,11 @@ impl Database {
     // -----------------------------------------------------------------------
 
     /// Add a new application and record the initial status change.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn add_application(
-        &self,
-        company: &str,
-        position: &str,
-        jd_url: Option<&str>,
-        jd_text: Option<&str>,
-        location: Option<&str>,
-        status: AppStatus,
-        salary: Option<&str>,
-        job_type: Option<JobType>,
-        job_level: Option<JobLevel>,
-        is_remote: Option<bool>,
-        source: Option<&str>,
-        company_url: Option<&str>,
-        notes: Option<&str>,
-    ) -> Result<String> {
+    pub async fn add_application(&self, params: &AddApplicationParams<'_>) -> Result<String> {
         let id = uuid::Uuid::new_v4().to_string();
-        let status_str = status.as_str();
-        let jt = job_type.map(|v| v.as_str().to_string());
-        let jl = job_level.map(|v| v.as_str().to_string());
+        let status_str = params.status.as_str();
+        let jt = params.job_type.map(|v| v.as_str().to_string());
+        let jl = params.job_level.map(|v| v.as_str().to_string());
 
         sqlx::query(
             "INSERT INTO applications (id, company, position, jd_url, jd_text, location, status, \
@@ -711,19 +210,19 @@ impl Database {
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         )
         .bind(&id)
-        .bind(company)
-        .bind(position)
-        .bind(jd_url)
-        .bind(jd_text)
-        .bind(location)
+        .bind(params.company)
+        .bind(params.position)
+        .bind(params.jd_url)
+        .bind(params.jd_text)
+        .bind(params.location)
         .bind(status_str)
-        .bind(salary)
+        .bind(params.salary)
         .bind(jt.as_deref())
         .bind(jl.as_deref())
-        .bind(is_remote)
-        .bind(source)
-        .bind(company_url)
-        .bind(notes)
+        .bind(params.is_remote)
+        .bind(params.source)
+        .bind(params.company_url)
+        .bind(params.notes)
         .execute(self.pool())
         .await
         .context(error::SqlxSnafu)?;
@@ -840,33 +339,29 @@ impl Database {
     #[allow(clippy::too_many_lines)]
     pub async fn list_applications(
         &self,
-        status: Option<AppStatus>,
-        company: Option<&str>,
-        outcome: Option<Outcome>,
-        stage: Option<Stage>,
-        source: Option<&str>,
+        params: &ListApplicationParams<'_>,
     ) -> Result<Vec<Application>> {
         // Build first query (first 16 columns)
         let mut where_clause = String::from(" WHERE 1=1");
         let mut binds: Vec<String> = Vec::new();
 
-        if let Some(s) = status {
+        if let Some(s) = params.status {
             where_clause.push_str(" AND status = ?");
             binds.push(s.as_str().to_string());
         }
-        if let Some(c) = company {
+        if let Some(c) = params.company {
             where_clause.push_str(" AND company LIKE ?");
             binds.push(format!("%{c}%"));
         }
-        if let Some(o) = outcome {
+        if let Some(o) = params.outcome {
             where_clause.push_str(" AND outcome = ?");
             binds.push(o.as_str().to_string());
         }
-        if let Some(st) = stage {
+        if let Some(st) = params.stage {
             where_clause.push_str(" AND stage = ?");
             binds.push(st.as_str().to_string());
         }
-        if let Some(src) = source {
+        if let Some(src) = params.source {
             where_clause.push_str(" AND source LIKE ?");
             binds.push(format!("%{src}%"));
         }
@@ -1008,28 +503,10 @@ impl Database {
     }
 
     /// Update only the provided fields on an application.
-    #[allow(clippy::too_many_arguments)]
     pub async fn update_application_fields(
         &self,
         id: &str,
-        company: Option<&str>,
-        position: Option<&str>,
-        location: Option<&str>,
-        jd_url: Option<&str>,
-        jd_text: Option<&str>,
-        salary: Option<&str>,
-        job_type: Option<&str>,
-        job_level: Option<&str>,
-        is_remote: Option<bool>,
-        skills: Option<&str>,
-        experience_range: Option<&str>,
-        source: Option<&str>,
-        company_url: Option<&str>,
-        notes: Option<&str>,
-        tailored_summary: Option<&str>,
-        tailored_headline: Option<&str>,
-        tailored_skills: Option<&str>,
-        applied_at: Option<&str>,
+        params: &UpdateApplicationParams<'_>,
     ) -> Result<()> {
         // Ensure the application exists first.
         let _ = self.get_application(id).await?;
@@ -1046,26 +523,26 @@ impl Database {
             };
         }
 
-        push_field!("company", company);
-        push_field!("position", position);
-        push_field!("location", location);
-        push_field!("jd_url", jd_url);
-        push_field!("jd_text", jd_text);
-        push_field!("salary", salary);
-        push_field!("job_type", job_type);
-        push_field!("job_level", job_level);
-        push_field!("skills", skills);
-        push_field!("experience_range", experience_range);
-        push_field!("source", source);
-        push_field!("company_url", company_url);
-        push_field!("notes", notes);
-        push_field!("tailored_summary", tailored_summary);
-        push_field!("tailored_headline", tailored_headline);
-        push_field!("tailored_skills", tailored_skills);
-        push_field!("applied_at", applied_at);
+        push_field!("company", params.company);
+        push_field!("position", params.position);
+        push_field!("location", params.location);
+        push_field!("jd_url", params.jd_url);
+        push_field!("jd_text", params.jd_text);
+        push_field!("salary", params.salary);
+        push_field!("job_type", params.job_type);
+        push_field!("job_level", params.job_level);
+        push_field!("skills", params.skills);
+        push_field!("experience_range", params.experience_range);
+        push_field!("source", params.source);
+        push_field!("company_url", params.company_url);
+        push_field!("notes", params.notes);
+        push_field!("tailored_summary", params.tailored_summary);
+        push_field!("tailored_headline", params.tailored_headline);
+        push_field!("tailored_skills", params.tailored_skills);
+        push_field!("applied_at", params.applied_at);
 
         // is_remote needs special handling (bool -> integer)
-        if let Some(v) = is_remote {
+        if let Some(v) = params.is_remote {
             sets.push("is_remote = ?".to_string());
             binds.push(if v { "1".to_string() } else { "0".to_string() });
         }

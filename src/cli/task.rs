@@ -2,7 +2,8 @@ use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
 use crate::{
-    db::{Database, TaskType},
+    db::Database,
+    domain::TaskType,
     error::{self, Result},
 };
 
