@@ -1,3 +1,4 @@
+pub mod analyze;
 pub mod app;
 pub mod export;
 pub mod interview;
@@ -37,10 +38,13 @@ pub enum Command {
     /// Track application stage transitions (set, list)
     #[command(subcommand)]
     Stage(StageCommand),
-    /// Analyze job fit (not yet implemented)
+    /// Analyze job fit using LLM or keyword fallback
     Analyze {
         /// Application ID (8-char prefix or full UUID)
-        id: String,
+        id:   String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Tailor resume for a job (not yet implemented)
     Tailor {
@@ -208,6 +212,9 @@ pub enum AppCommand {
         /// Whether the position is remote
         #[arg(long)]
         is_remote: Option<bool>,
+        /// Comma-separated skills (e.g. "Rust, Python, Go")
+        #[arg(long)]
+        skills:    Option<String>,
         /// New source
         #[arg(long)]
         source:    Option<String>,
