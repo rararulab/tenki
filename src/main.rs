@@ -7,7 +7,7 @@ mod paths;
 mod store;
 
 use clap::Parser;
-use cli::{Cli, Command, AppCommand, InterviewCommand};
+use cli::{Cli, Command, AppCommand, InterviewCommand, TaskCommand, StageCommand};
 
 #[tokio::main]
 async fn main() {
@@ -42,34 +42,59 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             eprintln!("tenki initialized at {}", db.path().display());
         }
         Command::App(cmd) => match cmd {
-            AppCommand::Add { company, position, jd_url, jd_text, location, status, json } => {
-                cli::app::add(&db, &company, &position, jd_url.as_deref(), jd_text.as_deref(), location.as_deref(), status, json).await?;
+            AppCommand::Add { company, position, jd_url, jd_text, location, status, salary, job_type, job_level, is_remote, source, company_url, notes, json } => {
+                cli::app::add(&db, &company, &position, jd_url.as_deref(), jd_text.as_deref(), location.as_deref(), status, salary.as_deref(), job_type, job_level, is_remote, source.as_deref(), company_url.as_deref(), notes.as_deref(), json).await?;
             }
-            AppCommand::List { status, company, json } => {
-                cli::app::list(&db, status, company.as_deref(), json).await?;
+            AppCommand::List { status, company, outcome, stage, source, json } => {
+                cli::app::list(&db, status, company.as_deref(), outcome, stage, source.as_deref(), json).await?;
             }
             AppCommand::Show { id, json } => {
                 cli::app::show(&db, &id, json).await?;
             }
-            AppCommand::Update { id, status, company, position, location, jd_url, jd_text, json } => {
-                cli::app::update(&db, &id, status, company.as_deref(), position.as_deref(), location.as_deref(), jd_url.as_deref(), jd_text.as_deref(), json).await?;
+            AppCommand::Update { id, status, outcome, stage, company, position, location, jd_url, jd_text, salary, job_type, job_level, is_remote, source, notes, json } => {
+                cli::app::update(&db, &id, status, outcome, stage, company.as_deref(), position.as_deref(), location.as_deref(), jd_url.as_deref(), jd_text.as_deref(), salary.as_deref(), job_type, job_level, is_remote, source.as_deref(), notes.as_deref(), json).await?;
             }
             AppCommand::Delete { id, json } => {
                 cli::app::delete(&db, &id, json).await?;
             }
         },
         Command::Interview(cmd) => match cmd {
-            InterviewCommand::Add { app_id, round, r#type, interviewer, scheduled_at, json } => {
-                cli::interview::add(&db, &app_id, round, r#type, interviewer.as_deref(), scheduled_at.as_deref(), json).await?;
+            InterviewCommand::Add { app_id, round, r#type, interviewer, scheduled_at, duration_mins, json } => {
+                cli::interview::add(&db, &app_id, round, r#type, interviewer.as_deref(), scheduled_at.as_deref(), duration_mins, json).await?;
             }
-            InterviewCommand::Update { id, status, interviewer: _, scheduled_at: _, json } => {
-                cli::interview::update(&db, &id, status, json).await?;
+            InterviewCommand::Update { id, status, outcome, interviewer, scheduled_at, duration_mins, json } => {
+                cli::interview::update(&db, &id, status, outcome, interviewer.as_deref(), scheduled_at.as_deref(), duration_mins, json).await?;
             }
             InterviewCommand::Note { id, note, json } => {
                 cli::interview::note(&db, &id, &note, json).await?;
             }
             InterviewCommand::List { app_id, json } => {
                 cli::interview::list(&db, &app_id, json).await?;
+            }
+        },
+        Command::Task(cmd) => match cmd {
+            TaskCommand::Add { app_id, r#type, title, due_date, notes, json } => {
+                cli::task::add(&db, &app_id, r#type, &title, due_date.as_deref(), notes.as_deref(), json).await?;
+            }
+            TaskCommand::Update { id, title, due_date, notes, json } => {
+                cli::task::update(&db, &id, title.as_deref(), due_date.as_deref(), notes.as_deref(), json).await?;
+            }
+            TaskCommand::Done { id, json } => {
+                cli::task::done(&db, &id, json).await?;
+            }
+            TaskCommand::Delete { id, json } => {
+                cli::task::delete(&db, &id, json).await?;
+            }
+            TaskCommand::List { app_id, json } => {
+                cli::task::list(&db, app_id.as_deref(), json).await?;
+            }
+        },
+        Command::Stage(cmd) => match cmd {
+            StageCommand::Set { app_id, stage, note, json } => {
+                cli::stage::set(&db, &app_id, stage, note.as_deref(), json).await?;
+            }
+            StageCommand::List { app_id, json } => {
+                cli::stage::list(&db, &app_id, json).await?;
             }
         },
         Command::Analyze { id } => {

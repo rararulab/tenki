@@ -2,9 +2,11 @@ pub mod app;
 pub mod export;
 pub mod interview;
 pub mod stats;
+pub mod task;
+pub mod stage;
 
 use clap::{Parser, Subcommand};
-use crate::db::{AppStatus, InterviewType, InterviewStatus};
+use crate::db::{AppStatus, InterviewType, InterviewStatus, Outcome, Stage, JobType, JobLevel, TaskType, InterviewOutcome};
 
 #[derive(Parser)]
 #[command(name = "tenki", about = "Job application tracker — agent-native")]
@@ -20,6 +22,10 @@ pub enum Command {
     App(AppCommand),
     #[command(subcommand)]
     Interview(InterviewCommand),
+    #[command(subcommand)]
+    Task(TaskCommand),
+    #[command(subcommand)]
+    Stage(StageCommand),
     Analyze { id: String },
     Tailor { id: String },
     Export {
@@ -54,11 +60,21 @@ pub enum AppCommand {
         #[arg(long)] jd_text: Option<String>,
         #[arg(long)] location: Option<String>,
         #[arg(long, value_enum, default_value_t = AppStatus::Bookmarked)] status: AppStatus,
+        #[arg(long)] salary: Option<String>,
+        #[arg(long, value_enum)] job_type: Option<JobType>,
+        #[arg(long, value_enum)] job_level: Option<JobLevel>,
+        #[arg(long)] is_remote: bool,
+        #[arg(long)] source: Option<String>,
+        #[arg(long)] company_url: Option<String>,
+        #[arg(long)] notes: Option<String>,
         #[arg(long)] json: bool,
     },
     List {
         #[arg(long, value_enum)] status: Option<AppStatus>,
         #[arg(long)] company: Option<String>,
+        #[arg(long, value_enum)] outcome: Option<Outcome>,
+        #[arg(long, value_enum)] stage: Option<Stage>,
+        #[arg(long)] source: Option<String>,
         #[arg(long)] json: bool,
     },
     Show {
@@ -68,11 +84,19 @@ pub enum AppCommand {
     Update {
         id: String,
         #[arg(long, value_enum)] status: Option<AppStatus>,
+        #[arg(long, value_enum)] outcome: Option<Outcome>,
+        #[arg(long, value_enum)] stage: Option<Stage>,
         #[arg(long)] company: Option<String>,
         #[arg(long)] position: Option<String>,
         #[arg(long)] location: Option<String>,
         #[arg(long)] jd_url: Option<String>,
         #[arg(long)] jd_text: Option<String>,
+        #[arg(long)] salary: Option<String>,
+        #[arg(long, value_enum)] job_type: Option<JobType>,
+        #[arg(long, value_enum)] job_level: Option<JobLevel>,
+        #[arg(long)] is_remote: Option<bool>,
+        #[arg(long)] source: Option<String>,
+        #[arg(long)] notes: Option<String>,
         #[arg(long)] json: bool,
     },
     Delete {
@@ -89,18 +113,66 @@ pub enum InterviewCommand {
         #[arg(long, value_enum, default_value_t = InterviewType::Other)] r#type: InterviewType,
         #[arg(long)] interviewer: Option<String>,
         #[arg(long)] scheduled_at: Option<String>,
+        #[arg(long)] duration_mins: Option<i64>,
         #[arg(long)] json: bool,
     },
     Update {
         id: String,
         #[arg(long, value_enum)] status: Option<InterviewStatus>,
+        #[arg(long, value_enum)] outcome: Option<InterviewOutcome>,
         #[arg(long)] interviewer: Option<String>,
         #[arg(long)] scheduled_at: Option<String>,
+        #[arg(long)] duration_mins: Option<i64>,
         #[arg(long)] json: bool,
     },
     Note {
         id: String,
         note: String,
+        #[arg(long)] json: bool,
+    },
+    List {
+        app_id: String,
+        #[arg(long)] json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum TaskCommand {
+    Add {
+        #[arg(long)] app_id: String,
+        #[arg(long, value_enum, default_value_t = TaskType::Todo)] r#type: TaskType,
+        title: String,
+        #[arg(long)] due_date: Option<String>,
+        #[arg(long)] notes: Option<String>,
+        #[arg(long)] json: bool,
+    },
+    Update {
+        id: String,
+        #[arg(long)] title: Option<String>,
+        #[arg(long)] due_date: Option<String>,
+        #[arg(long)] notes: Option<String>,
+        #[arg(long)] json: bool,
+    },
+    Done {
+        id: String,
+        #[arg(long)] json: bool,
+    },
+    Delete {
+        id: String,
+        #[arg(long)] json: bool,
+    },
+    List {
+        app_id: Option<String>,
+        #[arg(long)] json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum StageCommand {
+    Set {
+        app_id: String,
+        #[arg(value_enum)] stage: Stage,
+        #[arg(long)] note: Option<String>,
         #[arg(long)] json: bool,
     },
     List {

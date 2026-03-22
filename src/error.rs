@@ -32,6 +32,9 @@ pub enum TenkiError {
     #[snafu(display("interview not found: {id}"))]
     InterviewNotFound { id: String },
 
+    #[snafu(display("task not found: {id}"))]
+    TaskNotFound { id: String },
+
     #[snafu(display("invalid status: {status}"))]
     InvalidStatus { status: String },
 

@@ -1,7 +1,7 @@
 use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
-use crate::db::{Database, InterviewStatus, InterviewType};
+use crate::db::{Database, InterviewOutcome, InterviewStatus, InterviewType};
 use crate::error::{self, Result};
 
 pub async fn add(
@@ -11,10 +11,11 @@ pub async fn add(
     interview_type: InterviewType,
     interviewer: Option<&str>,
     scheduled_at: Option<&str>,
+    duration_mins: Option<i64>,
     json: bool,
 ) -> Result<()> {
     let full_app_id = db.resolve_app_id(app_id).await?;
-    let id = db.add_interview(&full_app_id, i64::from(round), interview_type, interviewer, scheduled_at).await?;
+    let id = db.add_interview(&full_app_id, i64::from(round), interview_type, interviewer, scheduled_at, duration_mins).await?;
     if json {
         let out = serde_json::json!({ "id": id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
@@ -24,16 +25,19 @@ pub async fn add(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn update(
     db: &Database,
     id: &str,
     status: Option<InterviewStatus>,
+    outcome: Option<InterviewOutcome>,
+    interviewer: Option<&str>,
+    scheduled_at: Option<&str>,
+    duration_mins: Option<i64>,
     json: bool,
 ) -> Result<()> {
     let full_id = db.resolve_interview_id(id).await?;
-    if let Some(s) = status {
-        db.update_interview_status(&full_id, s).await?;
-    }
+    db.update_interview(&full_id, status, outcome, interviewer, scheduled_at, duration_mins).await?;
     if json {
         let out = serde_json::json!({ "updated": full_id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
@@ -63,13 +67,14 @@ pub async fn list(db: &Database, app_id: &str, json: bool) -> Result<()> {
     } else {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);
-        table.set_header(["ID", "Round", "Type", "Status", "Interviewer", "Scheduled"]);
+        table.set_header(["ID", "Round", "Type", "Status", "Outcome", "Interviewer", "Scheduled"]);
         for iv in &interviews {
             table.add_row([
                 &iv.id[..8],
                 &iv.round.to_string(),
                 &iv.r#type,
                 &iv.status,
+                iv.outcome.as_deref().unwrap_or("—"),
                 iv.interviewer.as_deref().unwrap_or("—"),
                 iv.scheduled_at.as_deref().unwrap_or("—"),
             ]);

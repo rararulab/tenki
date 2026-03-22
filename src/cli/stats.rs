@@ -10,6 +10,8 @@ pub async fn stats(db: &Database, json: bool) -> Result<()> {
         println!("{}", serde_json::to_string(&s).context(error::JsonSnafu)?);
     } else {
         eprintln!("Total applications: {}", s.total);
+
+        // By Status
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);
         table.set_header(["Status", "Count"]);
@@ -17,6 +19,45 @@ pub async fn stats(db: &Database, json: bool) -> Result<()> {
             table.add_row([status.as_str(), &count.to_string()]);
         }
         println!("{table}");
+
+        // By Stage
+        if !s.by_stage.is_empty() {
+            println!();
+            let mut table = Table::new();
+            table.load_preset(UTF8_FULL);
+            table.set_header(["Stage", "Count"]);
+            for (stage, count) in &s.by_stage {
+                table.add_row([stage.as_str(), &count.to_string()]);
+            }
+            println!("{table}");
+        }
+
+        // By Outcome
+        if !s.by_outcome.is_empty() {
+            println!();
+            let mut table = Table::new();
+            table.load_preset(UTF8_FULL);
+            table.set_header(["Outcome", "Count"]);
+            for (outcome, count) in &s.by_outcome {
+                table.add_row([outcome.as_str(), &count.to_string()]);
+            }
+            println!("{table}");
+        }
+
+        // By Source
+        if !s.by_source.is_empty() {
+            println!();
+            let mut table = Table::new();
+            table.load_preset(UTF8_FULL);
+            table.set_header(["Source", "Count"]);
+            for (source, count) in &s.by_source {
+                table.add_row([source.as_str(), &count.to_string()]);
+            }
+            println!("{table}");
+        }
+
+        eprintln!("Pending Tasks: {}", s.pending_tasks);
+        eprintln!("Upcoming Interviews: {}", s.upcoming_interviews);
     }
     Ok(())
 }
