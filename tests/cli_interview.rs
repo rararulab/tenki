@@ -15,7 +15,15 @@ fn interview_lifecycle() {
     // Add interview
     let out = common::tenki_with(&tmp)
         .args([
-            "interview", "add", "--app-id", app_id, "--round", "1", "--type", "technical", "--json",
+            "interview",
+            "add",
+            "--app-id",
+            app_id,
+            "--round",
+            "1",
+            "--type",
+            "technical",
+            "--json",
         ])
         .output()
         .expect("run");
@@ -25,7 +33,14 @@ fn interview_lifecycle() {
     // Update
     common::tenki_with(&tmp)
         .args([
-            "interview", "update", iid, "--status", "completed", "--outcome", "pass", "--json",
+            "interview",
+            "update",
+            iid,
+            "--status",
+            "completed",
+            "--outcome",
+            "pass",
+            "--json",
         ])
         .assert()
         .success();

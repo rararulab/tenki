@@ -10,7 +10,15 @@ fn stats_counts_applications() {
         .success();
     common::tenki_with(&tmp)
         .args([
-            "app", "add", "--company", "B", "--position", "Y", "--status", "applied", "--json",
+            "app",
+            "add",
+            "--company",
+            "B",
+            "--position",
+            "Y",
+            "--status",
+            "applied",
+            "--json",
         ])
         .assert()
         .success();

@@ -15,7 +15,15 @@ fn app_add_and_list_json() {
     let tmp = common::tenki_initialized();
     // Add
     common::tenki_with(&tmp)
-        .args(["app", "add", "--company", "Acme", "--position", "SRE", "--json"])
+        .args([
+            "app",
+            "add",
+            "--company",
+            "Acme",
+            "--position",
+            "SRE",
+            "--json",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("\"id\""));
@@ -32,7 +40,15 @@ fn app_show_update_delete() {
     let tmp = common::tenki_initialized();
     // Add
     let output = common::tenki_with(&tmp)
-        .args(["app", "add", "--company", "TestCo", "--position", "Dev", "--json"])
+        .args([
+            "app",
+            "add",
+            "--company",
+            "TestCo",
+            "--position",
+            "Dev",
+            "--json",
+        ])
         .output()
         .expect("run");
     let v: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
@@ -73,14 +89,28 @@ fn app_list_with_filters() {
     let tmp = common::tenki_initialized();
     common::tenki_with(&tmp)
         .args([
-            "app", "add", "--company", "Google", "--position", "SRE", "--source", "linkedin",
+            "app",
+            "add",
+            "--company",
+            "Google",
+            "--position",
+            "SRE",
+            "--source",
+            "linkedin",
             "--json",
         ])
         .assert()
         .success();
     common::tenki_with(&tmp)
         .args([
-            "app", "add", "--company", "Meta", "--position", "SWE", "--source", "referral",
+            "app",
+            "add",
+            "--company",
+            "Meta",
+            "--position",
+            "SWE",
+            "--source",
+            "referral",
             "--json",
         ])
         .assert()

@@ -19,7 +19,13 @@ fn stage_transitions() {
 
     common::tenki_with(&tmp)
         .args([
-            "stage", "set", app_id, "technical", "--note", "Phone screen done", "--json",
+            "stage",
+            "set",
+            app_id,
+            "technical",
+            "--note",
+            "Phone screen done",
+            "--json",
         ])
         .assert()
         .success();

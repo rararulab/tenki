@@ -14,7 +14,14 @@ fn task_lifecycle() {
     // Add task
     let out = common::tenki_with(&tmp)
         .args([
-            "task", "add", "--app-id", app_id, "--type", "prep", "Review system design", "--json",
+            "task",
+            "add",
+            "--app-id",
+            app_id,
+            "--type",
+            "prep",
+            "Review system design",
+            "--json",
         ])
         .output()
         .expect("run");
