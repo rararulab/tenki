@@ -116,6 +116,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 job_type,
                 job_level,
                 is_remote,
+                skills,
                 source,
                 notes,
                 json,
@@ -132,6 +133,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     .maybe_job_type(job_type_str.as_deref())
                     .maybe_job_level(job_level_str.as_deref())
                     .maybe_is_remote(is_remote)
+                    .maybe_skills(skills.as_deref())
                     .maybe_source(source.as_deref())
                     .maybe_notes(notes.as_deref())
                     .build();
@@ -251,8 +253,9 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 cli::stage::list(&db, &app_id, json).await?;
             }
         },
-        Command::Analyze { id } => {
-            eprintln!("analyze not yet implemented (app: {id})");
+        Command::Analyze { id, json } => {
+            let full_id = db.resolve_app_id(&id).await?;
+            cli::analyze::run(&db, &full_id, json).await?;
         }
         Command::Tailor { id } => {
             eprintln!("tailor not yet implemented (app: {id})");

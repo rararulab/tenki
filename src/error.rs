@@ -43,6 +43,11 @@ pub enum TenkiError {
 
     #[snafu(display("invalid URL: {input} — expected http:// or https://"))]
     InvalidUrl { input: String },
+
+    #[snafu(display(
+        "application {id} has no JD text — cannot analyze fit without a job description"
+    ))]
+    MissingJdText { id: String },
 }
 
 pub type Result<T> = std::result::Result<T, TenkiError>;
