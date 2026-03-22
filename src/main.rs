@@ -315,7 +315,9 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
 /// Set a config field by dotted key path.
 fn set_config_field(cfg: &mut app_config::AppConfig, key: &str, value: &str) {
     match key {
-        "example.setting" => cfg.example.setting = value.to_string(),
+        "defaults.status" => cfg.defaults.status = value.to_string(),
+        "defaults.source" => cfg.defaults.source = Some(value.to_string()),
+        "display.date_format" => cfg.display.date_format = value.to_string(),
         _ => eprintln!("warning: unknown config key: {key}"),
     }
 }
@@ -323,12 +325,24 @@ fn set_config_field(cfg: &mut app_config::AppConfig, key: &str, value: &str) {
 /// Get a config field by dotted key path.
 fn get_config_field(cfg: &app_config::AppConfig, key: &str) -> Option<String> {
     match key {
-        "example.setting" => Some(cfg.example.setting.clone()),
+        "defaults.status" => Some(cfg.defaults.status.clone()),
+        "defaults.source" => cfg.defaults.source.clone(),
+        "display.date_format" => Some(cfg.display.date_format.clone()),
         _ => None,
     }
 }
 
 /// Flatten config into key-value pairs for listing.
 fn config_as_map(cfg: &app_config::AppConfig) -> Vec<(String, String)> {
-    vec![("example.setting".to_string(), cfg.example.setting.clone())]
+    vec![
+        ("defaults.status".to_string(), cfg.defaults.status.clone()),
+        (
+            "defaults.source".to_string(),
+            cfg.defaults.source.clone().unwrap_or_default(),
+        ),
+        (
+            "display.date_format".to_string(),
+            cfg.display.date_format.clone(),
+        ),
+    ]
 }

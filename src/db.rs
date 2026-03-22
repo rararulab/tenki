@@ -199,6 +199,13 @@ impl Database {
 
     /// Add a new application and record the initial status change.
     pub async fn add_application(&self, params: &AddApplicationParams<'_>) -> Result<String> {
+        if let Some(url) = params.jd_url {
+            crate::domain::validation::validate_url(url)?;
+        }
+        if let Some(url) = params.company_url {
+            crate::domain::validation::validate_url(url)?;
+        }
+
         let id = uuid::Uuid::new_v4().to_string();
         let status_str = params.status.as_str();
         let jt = params.job_type.map(|v| v.as_str().to_string());
@@ -508,6 +515,16 @@ impl Database {
         id: &str,
         params: &UpdateApplicationParams<'_>,
     ) -> Result<()> {
+        if let Some(url) = params.jd_url {
+            crate::domain::validation::validate_url(url)?;
+        }
+        if let Some(url) = params.company_url {
+            crate::domain::validation::validate_url(url)?;
+        }
+        if let Some(date) = params.applied_at {
+            crate::domain::validation::validate_date(date)?;
+        }
+
         // Ensure the application exists first.
         let _ = self.get_application(id).await?;
 
@@ -702,6 +719,10 @@ impl Database {
         scheduled_at: Option<&str>,
         duration_mins: Option<i64>,
     ) -> Result<String> {
+        if let Some(date) = scheduled_at {
+            crate::domain::validation::validate_date(date)?;
+        }
+
         // Verify the application exists.
         let _ = self.get_application(application_id).await?;
 
@@ -875,6 +896,10 @@ impl Database {
         due_date: Option<&str>,
         notes: Option<&str>,
     ) -> Result<String> {
+        if let Some(date) = due_date {
+            crate::domain::validation::validate_date(date)?;
+        }
+
         // Verify the application exists.
         let _ = self.get_application(application_id).await?;
 

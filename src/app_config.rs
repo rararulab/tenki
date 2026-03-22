@@ -10,22 +10,43 @@ static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppConfig {
-    /// Example configuration section.
-    pub example: ExampleConfig,
+    /// Default values for new applications.
+    pub defaults: DefaultsConfig,
+    /// Display preferences.
+    pub display:  DisplayConfig,
 }
 
-/// Example configuration section — replace with your own.
+/// Default values applied when creating new applications.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
-pub struct ExampleConfig {
-    /// An example setting.
-    pub setting: String,
+pub struct DefaultsConfig {
+    /// Default status when adding an application (default: "bookmarked").
+    pub status: String,
+    /// Default source for new applications (e.g. "linkedin").
+    pub source: Option<String>,
 }
 
-impl Default for ExampleConfig {
+impl Default for DefaultsConfig {
     fn default() -> Self {
         Self {
-            setting: "default-value".to_string(),
+            status: "bookmarked".to_string(),
+            source: None,
+        }
+    }
+}
+
+/// Display preferences for CLI output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DisplayConfig {
+    /// Date format for human-readable output (default: "%Y-%m-%d").
+    pub date_format: String,
+}
+
+impl Default for DisplayConfig {
+    fn default() -> Self {
+        Self {
+            date_format: "%Y-%m-%d".to_string(),
         }
     }
 }

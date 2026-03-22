@@ -3,6 +3,7 @@
 mod enums;
 mod models;
 mod params;
+pub mod validation;
 
 pub use enums::{
     AppStatus, InterviewOutcome, InterviewStatus, InterviewType, JobLevel, JobType, Outcome, Stage,
