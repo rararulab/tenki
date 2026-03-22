@@ -110,9 +110,11 @@ pub async fn show(db: &Database, id: &str, json: bool) -> Result<()> {
         println!("Job Level:  {}", app.job_level.as_deref().unwrap_or("—"));
         println!(
             "Remote:     {}",
-            app.is_remote
-                .map_or("—".to_string(), |v| if v { "yes" } else { "no" }
-                    .to_string())
+            match app.is_remote {
+                Some(true) => "yes",
+                Some(false) => "no",
+                None => "—",
+            }
         );
         println!("Skills:     {}", app.skills.as_deref().unwrap_or("—"));
         println!("Source:     {}", app.source.as_deref().unwrap_or("—"));
@@ -185,8 +187,8 @@ pub async fn update(
     if let Some(st) = stage {
         db.update_application_stage(&full_id, st, None).await?;
     }
-    let jt_str = job_type.map(|v| v.as_str().to_string());
-    let jl_str = job_level.map(|v| v.as_str().to_string());
+    let job_type_str = job_type.map(|v| v.as_str().to_string());
+    let job_level_str = job_level.map(|v| v.as_str().to_string());
     db.update_application_fields(
         &full_id,
         company,
@@ -195,8 +197,8 @@ pub async fn update(
         jd_url,
         jd_text,
         salary,
-        jt_str.as_deref(),
-        jl_str.as_deref(),
+        job_type_str.as_deref(),
+        job_level_str.as_deref(),
         is_remote,
         None, // skills
         None, // experience_range

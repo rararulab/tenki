@@ -6,6 +6,7 @@ use crate::{
     error::{self, Result},
 };
 
+#[allow(clippy::too_many_arguments)]
 pub async fn add(
     db: &Database,
     app_id: &str,

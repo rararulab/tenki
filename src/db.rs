@@ -734,6 +734,7 @@ impl Database {
     }
 
     /// Fetch a single application by ID.
+    #[allow(clippy::type_complexity, clippy::too_many_lines)]
     pub async fn get_application(&self, id: &str) -> Result<Application> {
         let row: Option<(
             String,         // 0  id
@@ -836,6 +837,7 @@ impl Database {
     }
 
     /// List applications with optional filters.
+    #[allow(clippy::too_many_lines)]
     pub async fn list_applications(
         &self,
         status: Option<AppStatus>,
@@ -1144,6 +1146,7 @@ impl Database {
     }
 
     /// Update fitness score and notes for an application.
+    #[allow(dead_code)]
     pub async fn update_fitness(&self, id: &str, score: f64, notes: &str) -> Result<()> {
         let result = sqlx::query(
             "UPDATE applications SET fitness_score = ?1, fitness_notes = ?2, updated_at = \
@@ -1163,6 +1166,7 @@ impl Database {
     }
 
     /// Update resume typst source and compiled PDF.
+    #[allow(dead_code)]
     pub async fn update_resume(&self, id: &str, typ: &str, pdf_bytes: &[u8]) -> Result<()> {
         let result = sqlx::query(
             "UPDATE applications SET resume_typ = ?1, resume_pdf = ?2, updated_at = \
@@ -1245,6 +1249,7 @@ impl Database {
     }
 
     /// Update an interview's status.
+    #[allow(dead_code)]
     pub async fn update_interview_status(&self, id: &str, status: InterviewStatus) -> Result<()> {
         let result = sqlx::query("UPDATE interviews SET status = ?1 WHERE id = ?2")
             .bind(status.as_str())
@@ -1335,6 +1340,7 @@ impl Database {
     }
 
     /// List interviews for an application ordered by round.
+    #[allow(clippy::type_complexity)]
     pub async fn list_interviews(&self, application_id: &str) -> Result<Vec<InterviewRow>> {
         let rows: Vec<(
             String,         // id
@@ -1486,6 +1492,7 @@ impl Database {
     }
 
     /// List tasks for a specific application.
+    #[allow(clippy::type_complexity)]
     pub async fn list_tasks(&self, application_id: &str) -> Result<Vec<TaskRow>> {
         let rows: Vec<(
             String,         // id
@@ -1523,6 +1530,7 @@ impl Database {
 
     /// List all pending (incomplete) tasks across all applications, ordered by
     /// due date.
+    #[allow(clippy::type_complexity)]
     pub async fn list_all_pending_tasks(&self) -> Result<Vec<TaskRow>> {
         let rows: Vec<(
             String,         // id
@@ -1587,6 +1595,7 @@ impl Database {
     }
 
     /// List stage events for an application.
+    #[allow(clippy::type_complexity)]
     pub async fn list_stage_events(&self, application_id: &str) -> Result<Vec<StageEvent>> {
         let rows: Vec<(
             String,         // id
@@ -1728,31 +1737,31 @@ impl Database {
         .await
         .context(error::SqlxSnafu)?;
 
-        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let by_status = status_rows
             .into_iter()
             .map(|(s, c)| (s, c as usize))
             .collect();
 
-        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let by_outcome = outcome_rows
             .into_iter()
             .map(|(s, c)| (s, c as usize))
             .collect();
 
-        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let by_stage = stage_rows
             .into_iter()
             .map(|(s, c)| (s, c as usize))
             .collect();
 
-        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let by_source = source_rows
             .into_iter()
             .map(|(s, c)| (s, c as usize))
             .collect();
 
-        #[allow(clippy::cast_sign_loss)]
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         Ok(Stats {
             total: total as usize,
             by_status,

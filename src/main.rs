@@ -28,6 +28,7 @@ async fn main() {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let db = db::Database::open_default().await?;

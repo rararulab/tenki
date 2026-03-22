@@ -17,4 +17,5 @@ pub fn data_dir() -> &'static Path {
 
 pub fn db_path() -> PathBuf { data_dir().join("tenki.db") }
 pub fn config_file() -> PathBuf { data_dir().join("config.toml") }
+#[allow(dead_code)]
 pub fn cache_dir() -> PathBuf { data_dir().join("cache") }
