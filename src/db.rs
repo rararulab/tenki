@@ -46,9 +46,7 @@ impl AppStatus {
 }
 
 impl fmt::Display for AppStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for AppStatus {
@@ -98,9 +96,7 @@ impl InterviewType {
 }
 
 impl fmt::Display for InterviewType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
@@ -123,9 +119,7 @@ impl InterviewStatus {
 }
 
 impl fmt::Display for InterviewStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 // --- New enums ---
@@ -159,9 +153,7 @@ impl Outcome {
 }
 
 impl fmt::Display for Outcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for Outcome {
@@ -214,9 +206,7 @@ impl Stage {
 }
 
 impl fmt::Display for Stage {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for Stage {
@@ -263,9 +253,7 @@ impl JobType {
 }
 
 impl fmt::Display for JobType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for JobType {
@@ -310,9 +298,7 @@ impl JobLevel {
 }
 
 impl fmt::Display for JobLevel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for JobLevel {
@@ -357,9 +343,7 @@ impl TaskType {
 }
 
 impl fmt::Display for TaskType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for TaskType {
@@ -400,9 +384,7 @@ impl InterviewOutcome {
 }
 
 impl fmt::Display for InterviewOutcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(self.as_str()) }
 }
 
 impl FromStr for InterviewOutcome {
@@ -427,95 +409,95 @@ impl FromStr for InterviewOutcome {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Application {
-    pub id: String,
-    pub company: String,
-    pub position: String,
-    pub jd_url: Option<String>,
-    pub jd_text: Option<String>,
-    pub location: Option<String>,
-    pub status: String,
-    pub stage: Option<String>,
-    pub outcome: Option<String>,
-    pub fitness_score: Option<f64>,
-    pub fitness_notes: Option<String>,
-    pub resume_typ: Option<String>,
-    pub has_resume_pdf: bool,
-    pub salary: Option<String>,
-    pub salary_min: Option<f64>,
-    pub salary_max: Option<f64>,
-    pub salary_currency: Option<String>,
-    pub job_type: Option<String>,
-    pub is_remote: Option<bool>,
-    pub job_level: Option<String>,
-    pub skills: Option<String>,
-    pub experience_range: Option<String>,
-    pub source: Option<String>,
-    pub company_url: Option<String>,
-    pub notes: Option<String>,
-    pub tailored_summary: Option<String>,
+    pub id:                String,
+    pub company:           String,
+    pub position:          String,
+    pub jd_url:            Option<String>,
+    pub jd_text:           Option<String>,
+    pub location:          Option<String>,
+    pub status:            String,
+    pub stage:             Option<String>,
+    pub outcome:           Option<String>,
+    pub fitness_score:     Option<f64>,
+    pub fitness_notes:     Option<String>,
+    pub resume_typ:        Option<String>,
+    pub has_resume_pdf:    bool,
+    pub salary:            Option<String>,
+    pub salary_min:        Option<f64>,
+    pub salary_max:        Option<f64>,
+    pub salary_currency:   Option<String>,
+    pub job_type:          Option<String>,
+    pub is_remote:         Option<bool>,
+    pub job_level:         Option<String>,
+    pub skills:            Option<String>,
+    pub experience_range:  Option<String>,
+    pub source:            Option<String>,
+    pub company_url:       Option<String>,
+    pub notes:             Option<String>,
+    pub tailored_summary:  Option<String>,
     pub tailored_headline: Option<String>,
-    pub tailored_skills: Option<String>,
-    pub applied_at: Option<String>,
-    pub closed_at: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
+    pub tailored_skills:   Option<String>,
+    pub applied_at:        Option<String>,
+    pub closed_at:         Option<String>,
+    pub created_at:        String,
+    pub updated_at:        String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct InterviewRow {
-    pub id: String,
+    pub id:             String,
     pub application_id: String,
-    pub round: i64,
-    pub r#type: String,
-    pub interviewer: Option<String>,
-    pub scheduled_at: Option<String>,
-    pub status: String,
-    pub questions: Option<String>,
-    pub notes: Option<String>,
-    pub outcome: Option<String>,
-    pub duration_mins: Option<i64>,
-    pub created_at: String,
+    pub round:          i64,
+    pub r#type:         String,
+    pub interviewer:    Option<String>,
+    pub scheduled_at:   Option<String>,
+    pub status:         String,
+    pub questions:      Option<String>,
+    pub notes:          Option<String>,
+    pub outcome:        Option<String>,
+    pub duration_mins:  Option<i64>,
+    pub created_at:     String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TaskRow {
-    pub id: String,
+    pub id:             String,
     pub application_id: String,
-    pub r#type: String,
-    pub title: String,
-    pub due_date: Option<String>,
-    pub is_completed: bool,
-    pub notes: Option<String>,
-    pub created_at: String,
+    pub r#type:         String,
+    pub title:          String,
+    pub due_date:       Option<String>,
+    pub is_completed:   bool,
+    pub notes:          Option<String>,
+    pub created_at:     String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StageEvent {
-    pub id: String,
+    pub id:             String,
     pub application_id: String,
-    pub from_stage: Option<String>,
-    pub to_stage: String,
-    pub occurred_at: String,
-    pub metadata: Option<String>,
-    pub created_at: String,
+    pub from_stage:     Option<String>,
+    pub to_stage:       String,
+    pub occurred_at:    String,
+    pub metadata:       Option<String>,
+    pub created_at:     String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusChange {
     pub from_status: String,
-    pub to_status: String,
-    pub note: Option<String>,
-    pub created_at: String,
+    pub to_status:   String,
+    pub note:        Option<String>,
+    pub created_at:  String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Stats {
-    pub total: usize,
-    pub by_status: Vec<(String, usize)>,
-    pub by_outcome: Vec<(String, usize)>,
-    pub by_stage: Vec<(String, usize)>,
-    pub by_source: Vec<(String, usize)>,
-    pub pending_tasks: usize,
+    pub total:               usize,
+    pub by_status:           Vec<(String, usize)>,
+    pub by_outcome:          Vec<(String, usize)>,
+    pub by_stage:            Vec<(String, usize)>,
+    pub by_source:           Vec<(String, usize)>,
+    pub pending_tasks:       usize,
     pub upcoming_interviews: usize,
 }
 
@@ -525,7 +507,7 @@ pub struct Stats {
 
 pub struct Database {
     store: DBStore,
-    path: PathBuf,
+    path:  PathBuf,
 }
 
 impl Database {
@@ -550,16 +532,13 @@ impl Database {
     }
 
     /// Return the database file path.
-    pub fn path(&self) -> &std::path::Path {
-        &self.path
-    }
+    pub fn path(&self) -> &std::path::Path { &self.path }
 
     /// Return a reference to the underlying `SqlitePool`.
-    pub const fn pool(&self) -> &SqlitePool {
-        self.store.pool()
-    }
+    pub const fn pool(&self) -> &SqlitePool { self.store.pool() }
 
-    /// Execute the schema DDL to create all tables, then run pending migrations.
+    /// Execute the schema DDL to create all tables, then run pending
+    /// migrations.
     pub async fn init(&self) -> Result<()> {
         let schema = include_str!("schema.sql");
         sqlx::raw_sql(schema)
@@ -574,9 +553,11 @@ impl Database {
 
     /// Apply any pending migrations to bring existing databases up to date.
     async fn run_migrations(&self) -> Result<()> {
-        // Ensure migrations table exists (already in schema.sql, but belt-and-suspenders)
+        // Ensure migrations table exists (already in schema.sql, but
+        // belt-and-suspenders)
         sqlx::raw_sql(
-            "CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY, applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY, applied_at \
+             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
         )
         .execute(self.pool())
         .await
@@ -594,7 +575,8 @@ impl Database {
         // Migration v2: enriched fields + new tables
         if !applied_set.contains(&2) {
             let migration = include_str!("migrations/v2.sql");
-            // Run each statement individually; ALTER TABLE fails if column exists, which is OK
+            // Run each statement individually; ALTER TABLE fails if column exists, which is
+            // OK
             for stmt in migration.split(';') {
                 let stmt = stmt.trim();
                 if stmt.is_empty() || stmt.starts_with("--") {
@@ -616,7 +598,8 @@ impl Database {
         Ok(())
     }
 
-    /// Check whether the database has been initialized (applications table exists).
+    /// Check whether the database has been initialized (applications table
+    /// exists).
     pub async fn ensure_initialized(&self) -> Result<()> {
         let row: Option<(i64,)> = sqlx::query_as(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='applications'",
@@ -638,12 +621,11 @@ impl Database {
     /// Resolve a short ID prefix to a full application ID.
     pub async fn resolve_app_id(&self, prefix: &str) -> Result<String> {
         let pattern = format!("{prefix}%");
-        let rows: Vec<(String,)> =
-            sqlx::query_as("SELECT id FROM applications WHERE id LIKE ?1")
-                .bind(&pattern)
-                .fetch_all(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM applications WHERE id LIKE ?1")
+            .bind(&pattern)
+            .fetch_all(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
 
         match rows.len() {
             0 => Err(TenkiError::ApplicationNotFound {
@@ -659,12 +641,11 @@ impl Database {
     /// Resolve a short ID prefix to a full interview ID.
     pub async fn resolve_interview_id(&self, prefix: &str) -> Result<String> {
         let pattern = format!("{prefix}%");
-        let rows: Vec<(String,)> =
-            sqlx::query_as("SELECT id FROM interviews WHERE id LIKE ?1")
-                .bind(&pattern)
-                .fetch_all(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM interviews WHERE id LIKE ?1")
+            .bind(&pattern)
+            .fetch_all(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
 
         match rows.len() {
             0 => Err(TenkiError::InterviewNotFound {
@@ -680,12 +661,11 @@ impl Database {
     /// Resolve a short ID prefix to a full task ID.
     pub async fn resolve_task_id(&self, prefix: &str) -> Result<String> {
         let pattern = format!("{prefix}%");
-        let rows: Vec<(String,)> =
-            sqlx::query_as("SELECT id FROM tasks WHERE id LIKE ?1")
-                .bind(&pattern)
-                .fetch_all(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let rows: Vec<(String,)> = sqlx::query_as("SELECT id FROM tasks WHERE id LIKE ?1")
+            .bind(&pattern)
+            .fetch_all(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
 
         match rows.len() {
             0 => Err(TenkiError::TaskNotFound {
@@ -726,7 +706,8 @@ impl Database {
         let jl = job_level.map(|v| v.as_str().to_string());
 
         sqlx::query(
-            "INSERT INTO applications (id, company, position, jd_url, jd_text, location, status, salary, job_type, job_level, is_remote, source, company_url, notes)
+            "INSERT INTO applications (id, company, position, jd_url, jd_text, location, status, \
+             salary, job_type, job_level, is_remote, source, company_url, notes)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         )
         .bind(&id)
@@ -747,8 +728,7 @@ impl Database {
         .await
         .context(error::SqlxSnafu)?;
 
-        self.record_status_change(&id, "", status_str, None)
-            .await?;
+        self.record_status_change(&id, "", status_str, None).await?;
 
         Ok(id)
     }
@@ -820,38 +800,38 @@ impl Database {
         let r2 = row2.expect("row must exist since first query succeeded");
 
         Ok(Application {
-            id: r.0,
-            company: r.1,
-            position: r.2,
-            jd_url: r.3,
-            jd_text: r.4,
-            location: r.5,
-            status: r.6,
-            stage: r.7,
-            outcome: r.8,
-            fitness_score: r.9,
-            fitness_notes: r.10,
-            resume_typ: r.11,
-            has_resume_pdf: r.12,
-            salary: r.13,
-            salary_min: r.14,
-            salary_max: r.15,
-            salary_currency: r2.0,
-            job_type: r2.1,
-            is_remote: r2.2.map(|v| v != 0),
-            job_level: r2.3,
-            skills: r2.4,
-            experience_range: r2.5,
-            source: r2.6,
-            company_url: r2.7,
-            notes: r2.8,
-            tailored_summary: r2.9,
+            id:                r.0,
+            company:           r.1,
+            position:          r.2,
+            jd_url:            r.3,
+            jd_text:           r.4,
+            location:          r.5,
+            status:            r.6,
+            stage:             r.7,
+            outcome:           r.8,
+            fitness_score:     r.9,
+            fitness_notes:     r.10,
+            resume_typ:        r.11,
+            has_resume_pdf:    r.12,
+            salary:            r.13,
+            salary_min:        r.14,
+            salary_max:        r.15,
+            salary_currency:   r2.0,
+            job_type:          r2.1,
+            is_remote:         r2.2.map(|v| v != 0),
+            job_level:         r2.3,
+            skills:            r2.4,
+            experience_range:  r2.5,
+            source:            r2.6,
+            company_url:       r2.7,
+            notes:             r2.8,
+            tailored_summary:  r2.9,
             tailored_headline: r2.10,
-            tailored_skills: r2.11,
-            applied_at: r2.12,
-            closed_at: r2.13,
-            created_at: r2.14,
-            updated_at: r2.15,
+            tailored_skills:   r2.11,
+            applied_at:        r2.12,
+            closed_at:         r2.13,
+            created_at:        r2.14,
+            updated_at:        r2.15,
         })
     }
 
@@ -898,24 +878,27 @@ impl Database {
              FROM applications{where_clause} ORDER BY updated_at DESC"
         );
 
-        let mut q1 = sqlx::query_as::<_, (
-            String,
-            String,
-            String,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            String,
-            Option<String>,
-            Option<String>,
-            Option<f64>,
-            Option<String>,
-            Option<String>,
-            bool,
-            Option<String>,
-            Option<f64>,
-            Option<f64>,
-        )>(&sql1);
+        let mut q1 = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+                Option<String>,
+                Option<String>,
+                Option<f64>,
+                Option<String>,
+                Option<String>,
+                bool,
+                Option<String>,
+                Option<f64>,
+                Option<f64>,
+            ),
+        >(&sql1);
 
         for b in &binds {
             q1 = q1.bind(b);
@@ -936,24 +919,27 @@ impl Database {
              FROM applications{where_clause} ORDER BY updated_at DESC"
         );
 
-        let mut q2 = sqlx::query_as::<_, (
-            Option<String>,
-            Option<String>,
-            Option<i64>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            String,
-            String,
-        )>(&sql2);
+        let mut q2 = sqlx::query_as::<
+            _,
+            (
+                Option<String>,
+                Option<String>,
+                Option<i64>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+                String,
+            ),
+        >(&sql2);
 
         for b in &binds {
             q2 = q2.bind(b);
@@ -965,48 +951,44 @@ impl Database {
             .into_iter()
             .zip(rows2)
             .map(|(r, r2)| Application {
-                id: r.0,
-                company: r.1,
-                position: r.2,
-                jd_url: r.3,
-                jd_text: r.4,
-                location: r.5,
-                status: r.6,
-                stage: r.7,
-                outcome: r.8,
-                fitness_score: r.9,
-                fitness_notes: r.10,
-                resume_typ: r.11,
-                has_resume_pdf: r.12,
-                salary: r.13,
-                salary_min: r.14,
-                salary_max: r.15,
-                salary_currency: r2.0,
-                job_type: r2.1,
-                is_remote: r2.2.map(|v| v != 0),
-                job_level: r2.3,
-                skills: r2.4,
-                experience_range: r2.5,
-                source: r2.6,
-                company_url: r2.7,
-                notes: r2.8,
-                tailored_summary: r2.9,
+                id:                r.0,
+                company:           r.1,
+                position:          r.2,
+                jd_url:            r.3,
+                jd_text:           r.4,
+                location:          r.5,
+                status:            r.6,
+                stage:             r.7,
+                outcome:           r.8,
+                fitness_score:     r.9,
+                fitness_notes:     r.10,
+                resume_typ:        r.11,
+                has_resume_pdf:    r.12,
+                salary:            r.13,
+                salary_min:        r.14,
+                salary_max:        r.15,
+                salary_currency:   r2.0,
+                job_type:          r2.1,
+                is_remote:         r2.2.map(|v| v != 0),
+                job_level:         r2.3,
+                skills:            r2.4,
+                experience_range:  r2.5,
+                source:            r2.6,
+                company_url:       r2.7,
+                notes:             r2.8,
+                tailored_summary:  r2.9,
                 tailored_headline: r2.10,
-                tailored_skills: r2.11,
-                applied_at: r2.12,
-                closed_at: r2.13,
-                created_at: r2.14,
-                updated_at: r2.15,
+                tailored_skills:   r2.11,
+                applied_at:        r2.12,
+                closed_at:         r2.13,
+                created_at:        r2.14,
+                updated_at:        r2.15,
             })
             .collect())
     }
 
     /// Update an application's status and record the change.
-    pub async fn update_application_status(
-        &self,
-        id: &str,
-        new_status: AppStatus,
-    ) -> Result<()> {
+    pub async fn update_application_status(&self, id: &str, new_status: AppStatus) -> Result<()> {
         let app = self.get_application(id).await?;
         let new_str = new_status.as_str();
 
@@ -1106,7 +1088,8 @@ impl Database {
     /// Set outcome and close an application.
     pub async fn update_application_outcome(&self, id: &str, outcome: Outcome) -> Result<()> {
         let result = sqlx::query(
-            "UPDATE applications SET outcome = ?1, closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            "UPDATE applications SET outcome = ?1, closed_at = CURRENT_TIMESTAMP, updated_at = \
+             CURRENT_TIMESTAMP WHERE id = ?2",
         )
         .bind(outcome.as_str())
         .bind(id)
@@ -1161,14 +1144,10 @@ impl Database {
     }
 
     /// Update fitness score and notes for an application.
-    pub async fn update_fitness(
-        &self,
-        id: &str,
-        score: f64,
-        notes: &str,
-    ) -> Result<()> {
+    pub async fn update_fitness(&self, id: &str, score: f64, notes: &str) -> Result<()> {
         let result = sqlx::query(
-            "UPDATE applications SET fitness_score = ?1, fitness_notes = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
+            "UPDATE applications SET fitness_score = ?1, fitness_notes = ?2, updated_at = \
+             CURRENT_TIMESTAMP WHERE id = ?3",
         )
         .bind(score)
         .bind(notes)
@@ -1184,14 +1163,10 @@ impl Database {
     }
 
     /// Update resume typst source and compiled PDF.
-    pub async fn update_resume(
-        &self,
-        id: &str,
-        typ: &str,
-        pdf_bytes: &[u8],
-    ) -> Result<()> {
+    pub async fn update_resume(&self, id: &str, typ: &str, pdf_bytes: &[u8]) -> Result<()> {
         let result = sqlx::query(
-            "UPDATE applications SET resume_typ = ?1, resume_pdf = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
+            "UPDATE applications SET resume_typ = ?1, resume_pdf = ?2, updated_at = \
+             CURRENT_TIMESTAMP WHERE id = ?3",
         )
         .bind(typ)
         .bind(pdf_bytes)
@@ -1208,24 +1183,26 @@ impl Database {
 
     /// Retrieve the compiled resume PDF bytes.
     pub async fn get_resume_pdf(&self, id: &str) -> Result<Option<Vec<u8>>> {
-        let row: Option<(Vec<u8>,)> =
-            sqlx::query_as("SELECT resume_pdf FROM applications WHERE id = ?1 AND resume_pdf IS NOT NULL")
-                .bind(id)
-                .fetch_optional(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let row: Option<(Vec<u8>,)> = sqlx::query_as(
+            "SELECT resume_pdf FROM applications WHERE id = ?1 AND resume_pdf IS NOT NULL",
+        )
+        .bind(id)
+        .fetch_optional(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
 
         Ok(row.map(|r| r.0))
     }
 
     /// Retrieve the resume typst source.
     pub async fn get_resume_typ(&self, id: &str) -> Result<Option<String>> {
-        let row: Option<(String,)> =
-            sqlx::query_as("SELECT resume_typ FROM applications WHERE id = ?1 AND resume_typ IS NOT NULL")
-                .bind(id)
-                .fetch_optional(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT resume_typ FROM applications WHERE id = ?1 AND resume_typ IS NOT NULL",
+        )
+        .bind(id)
+        .fetch_optional(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
 
         Ok(row.map(|r| r.0))
     }
@@ -1249,7 +1226,8 @@ impl Database {
 
         let id = uuid::Uuid::new_v4().to_string();
         sqlx::query(
-            "INSERT INTO interviews (id, application_id, round, type, interviewer, scheduled_at, duration_mins)
+            "INSERT INTO interviews (id, application_id, round, type, interviewer, scheduled_at, \
+             duration_mins)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         )
         .bind(&id)
@@ -1267,11 +1245,7 @@ impl Database {
     }
 
     /// Update an interview's status.
-    pub async fn update_interview_status(
-        &self,
-        id: &str,
-        status: InterviewStatus,
-    ) -> Result<()> {
+    pub async fn update_interview_status(&self, id: &str, status: InterviewStatus) -> Result<()> {
         let result = sqlx::query("UPDATE interviews SET status = ?1 WHERE id = ?2")
             .bind(status.as_str())
             .bind(id)
@@ -1361,10 +1335,7 @@ impl Database {
     }
 
     /// List interviews for an application ordered by round.
-    pub async fn list_interviews(
-        &self,
-        application_id: &str,
-    ) -> Result<Vec<InterviewRow>> {
+    pub async fn list_interviews(&self, application_id: &str) -> Result<Vec<InterviewRow>> {
         let rows: Vec<(
             String,         // id
             String,         // application_id
@@ -1392,18 +1363,18 @@ impl Database {
         Ok(rows
             .into_iter()
             .map(|r| InterviewRow {
-                id: r.0,
+                id:             r.0,
                 application_id: r.1,
-                round: r.2,
-                r#type: r.3,
-                interviewer: r.4,
-                scheduled_at: r.5,
-                status: r.6,
-                questions: r.7,
-                notes: r.8,
-                outcome: r.9,
-                duration_mins: r.10,
-                created_at: r.11,
+                round:          r.2,
+                r#type:         r.3,
+                interviewer:    r.4,
+                scheduled_at:   r.5,
+                status:         r.6,
+                questions:      r.7,
+                notes:          r.8,
+                outcome:        r.9,
+                duration_mins:  r.10,
+                created_at:     r.11,
             })
             .collect())
     }
@@ -1538,19 +1509,20 @@ impl Database {
         Ok(rows
             .into_iter()
             .map(|r| TaskRow {
-                id: r.0,
+                id:             r.0,
                 application_id: r.1,
-                r#type: r.2,
-                title: r.3,
-                due_date: r.4,
-                is_completed: r.5,
-                notes: r.6,
-                created_at: r.7,
+                r#type:         r.2,
+                title:          r.3,
+                due_date:       r.4,
+                is_completed:   r.5,
+                notes:          r.6,
+                created_at:     r.7,
             })
             .collect())
     }
 
-    /// List all pending (incomplete) tasks across all applications, ordered by due date.
+    /// List all pending (incomplete) tasks across all applications, ordered by
+    /// due date.
     pub async fn list_all_pending_tasks(&self) -> Result<Vec<TaskRow>> {
         let rows: Vec<(
             String,         // id
@@ -1573,14 +1545,14 @@ impl Database {
         Ok(rows
             .into_iter()
             .map(|r| TaskRow {
-                id: r.0,
+                id:             r.0,
                 application_id: r.1,
-                r#type: r.2,
-                title: r.3,
-                due_date: r.4,
-                is_completed: r.5,
-                notes: r.6,
-                created_at: r.7,
+                r#type:         r.2,
+                title:          r.3,
+                due_date:       r.4,
+                is_completed:   r.5,
+                notes:          r.6,
+                created_at:     r.7,
             })
             .collect())
     }
@@ -1615,10 +1587,7 @@ impl Database {
     }
 
     /// List stage events for an application.
-    pub async fn list_stage_events(
-        &self,
-        application_id: &str,
-    ) -> Result<Vec<StageEvent>> {
+    pub async fn list_stage_events(&self, application_id: &str) -> Result<Vec<StageEvent>> {
         let rows: Vec<(
             String,         // id
             String,         // application_id
@@ -1640,13 +1609,13 @@ impl Database {
         Ok(rows
             .into_iter()
             .map(|r| StageEvent {
-                id: r.0,
+                id:             r.0,
                 application_id: r.1,
-                from_stage: r.2,
-                to_stage: r.3,
-                occurred_at: r.4,
-                metadata: r.5,
-                created_at: r.6,
+                from_stage:     r.2,
+                to_stage:       r.3,
+                occurred_at:    r.4,
+                metadata:       r.5,
+                created_at:     r.6,
             })
             .collect())
     }
@@ -1681,10 +1650,7 @@ impl Database {
     }
 
     /// Get the status change timeline for an application.
-    pub async fn get_timeline(
-        &self,
-        application_id: &str,
-    ) -> Result<Vec<StatusChange>> {
+    pub async fn get_timeline(&self, application_id: &str) -> Result<Vec<StatusChange>> {
         let rows: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
             "SELECT from_status, to_status, note, created_at
              FROM status_history WHERE application_id = ?1
@@ -1699,9 +1665,9 @@ impl Database {
             .into_iter()
             .map(|r| StatusChange {
                 from_status: r.0,
-                to_status: r.1,
-                note: r.2,
-                created_at: r.3,
+                to_status:   r.1,
+                note:        r.2,
+                created_at:  r.3,
             })
             .collect())
     }
@@ -1712,11 +1678,10 @@ impl Database {
 
     /// Get aggregate statistics across all applications.
     pub async fn stats(&self) -> Result<Stats> {
-        let (total,): (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM applications")
-                .fetch_one(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
+        let (total,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applications")
+            .fetch_one(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
 
         let status_rows: Vec<(String, i64)> = sqlx::query_as(
             "SELECT status, COUNT(*) FROM applications GROUP BY status ORDER BY status",
@@ -1726,21 +1691,24 @@ impl Database {
         .context(error::SqlxSnafu)?;
 
         let outcome_rows: Vec<(String, i64)> = sqlx::query_as(
-            "SELECT outcome, COUNT(*) FROM applications WHERE outcome IS NOT NULL GROUP BY outcome ORDER BY outcome",
+            "SELECT outcome, COUNT(*) FROM applications WHERE outcome IS NOT NULL GROUP BY \
+             outcome ORDER BY outcome",
         )
         .fetch_all(self.pool())
         .await
         .context(error::SqlxSnafu)?;
 
         let stage_rows: Vec<(String, i64)> = sqlx::query_as(
-            "SELECT stage, COUNT(*) FROM applications WHERE stage IS NOT NULL GROUP BY stage ORDER BY stage",
+            "SELECT stage, COUNT(*) FROM applications WHERE stage IS NOT NULL GROUP BY stage \
+             ORDER BY stage",
         )
         .fetch_all(self.pool())
         .await
         .context(error::SqlxSnafu)?;
 
         let source_rows: Vec<(String, i64)> = sqlx::query_as(
-            "SELECT source, COUNT(*) FROM applications WHERE source IS NOT NULL GROUP BY source ORDER BY source",
+            "SELECT source, COUNT(*) FROM applications WHERE source IS NOT NULL GROUP BY source \
+             ORDER BY source",
         )
         .fetch_all(self.pool())
         .await
@@ -1753,7 +1721,8 @@ impl Database {
                 .context(error::SqlxSnafu)?;
 
         let (upcoming_interviews,): (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM interviews WHERE status = 'scheduled' AND scheduled_at > datetime('now')",
+            "SELECT COUNT(*) FROM interviews WHERE status = 'scheduled' AND scheduled_at > \
+             datetime('now')",
         )
         .fetch_one(self.pool())
         .await

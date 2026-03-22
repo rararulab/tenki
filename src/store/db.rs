@@ -11,6 +11,7 @@ pub struct DBStore {
 
 impl DBStore {
     pub const fn new(pool: SqlitePool) -> Self { Self { pool } }
+
     pub const fn pool(&self) -> &SqlitePool { &self.pool }
 
     pub async fn acquire(&self) -> Result<sqlx::pool::PoolConnection<Sqlite>> {

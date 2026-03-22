@@ -1,8 +1,10 @@
 use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
-use crate::db::{AppStatus, Database, JobType, JobLevel, Outcome, Stage};
-use crate::error::{self, Result};
+use crate::{
+    db::{AppStatus, Database, JobLevel, JobType, Outcome, Stage},
+    error::{self, Result},
+};
 
 #[allow(clippy::too_many_arguments)]
 pub async fn add(
@@ -23,7 +25,23 @@ pub async fn add(
     json: bool,
 ) -> Result<()> {
     let remote = if is_remote { Some(true) } else { None };
-    let id = db.add_application(company, position, jd_url, jd_text, location, status, salary, job_type, job_level, remote, source, company_url, notes).await?;
+    let id = db
+        .add_application(
+            company,
+            position,
+            jd_url,
+            jd_text,
+            location,
+            status,
+            salary,
+            job_type,
+            job_level,
+            remote,
+            source,
+            company_url,
+            notes,
+        )
+        .await?;
     if json {
         let out = serde_json::json!({ "id": id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
@@ -42,13 +60,20 @@ pub async fn list(
     source: Option<&str>,
     json: bool,
 ) -> Result<()> {
-    let apps = db.list_applications(status, company, outcome, stage, source).await?;
+    let apps = db
+        .list_applications(status, company, outcome, stage, source)
+        .await?;
     if json {
-        println!("{}", serde_json::to_string(&apps).context(error::JsonSnafu)?);
+        println!(
+            "{}",
+            serde_json::to_string(&apps).context(error::JsonSnafu)?
+        );
     } else {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);
-        table.set_header(["ID", "Company", "Position", "Status", "Stage", "Outcome", "Source", "Updated"]);
+        table.set_header([
+            "ID", "Company", "Position", "Status", "Stage", "Outcome", "Source", "Updated",
+        ]);
         for app in &apps {
             table.add_row([
                 &app.id[..8],
@@ -83,17 +108,45 @@ pub async fn show(db: &Database, id: &str, json: bool) -> Result<()> {
         println!("Salary:     {}", app.salary.as_deref().unwrap_or("—"));
         println!("Job Type:   {}", app.job_type.as_deref().unwrap_or("—"));
         println!("Job Level:  {}", app.job_level.as_deref().unwrap_or("—"));
-        println!("Remote:     {}", app.is_remote.map_or("—".to_string(), |v| if v { "yes" } else { "no" }.to_string()));
+        println!(
+            "Remote:     {}",
+            app.is_remote
+                .map_or("—".to_string(), |v| if v { "yes" } else { "no" }
+                    .to_string())
+        );
         println!("Skills:     {}", app.skills.as_deref().unwrap_or("—"));
         println!("Source:     {}", app.source.as_deref().unwrap_or("—"));
         println!("Company URL:{}", app.company_url.as_deref().unwrap_or("—"));
         println!("Notes:      {}", app.notes.as_deref().unwrap_or("—"));
-        println!("Fitness:    {}", app.fitness_score.map_or_else(|| "—".to_string(), |s| format!("{s:.1}")));
-        println!("Resume:     {}", if app.resume_typ.is_some() { "typ" } else { "—" });
-        println!("PDF:        {}", if app.has_resume_pdf { "yes" } else { "no" });
-        println!("Tailored Summary:  {}", app.tailored_summary.as_deref().unwrap_or("—"));
-        println!("Tailored Headline: {}", app.tailored_headline.as_deref().unwrap_or("—"));
-        println!("Tailored Skills:   {}", app.tailored_skills.as_deref().unwrap_or("—"));
+        println!(
+            "Fitness:    {}",
+            app.fitness_score
+                .map_or_else(|| "—".to_string(), |s| format!("{s:.1}"))
+        );
+        println!(
+            "Resume:     {}",
+            if app.resume_typ.is_some() {
+                "typ"
+            } else {
+                "—"
+            }
+        );
+        println!(
+            "PDF:        {}",
+            if app.has_resume_pdf { "yes" } else { "no" }
+        );
+        println!(
+            "Tailored Summary:  {}",
+            app.tailored_summary.as_deref().unwrap_or("—")
+        );
+        println!(
+            "Tailored Headline: {}",
+            app.tailored_headline.as_deref().unwrap_or("—")
+        );
+        println!(
+            "Tailored Skills:   {}",
+            app.tailored_skills.as_deref().unwrap_or("—")
+        );
         println!("Applied At: {}", app.applied_at.as_deref().unwrap_or("—"));
         println!("Closed At:  {}", app.closed_at.as_deref().unwrap_or("—"));
         println!("Created:    {}", app.created_at);
@@ -154,7 +207,8 @@ pub async fn update(
         None, // tailored_headline
         None, // tailored_skills
         None, // applied_at
-    ).await?;
+    )
+    .await?;
     if json {
         let app = db.get_application(&full_id).await?;
         println!("{}", serde_json::to_string(&app).context(error::JsonSnafu)?);

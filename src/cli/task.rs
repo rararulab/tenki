@@ -1,8 +1,10 @@
 use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
-use crate::db::{Database, TaskType};
-use crate::error::{self, Result};
+use crate::{
+    db::{Database, TaskType},
+    error::{self, Result},
+};
 
 pub async fn add(
     db: &Database,
@@ -14,7 +16,9 @@ pub async fn add(
     json: bool,
 ) -> Result<()> {
     let full_app_id = db.resolve_app_id(app_id).await?;
-    let id = db.add_task(&full_app_id, task_type, title, due_date, notes).await?;
+    let id = db
+        .add_task(&full_app_id, task_type, title, due_date, notes)
+        .await?;
     if json {
         let out = serde_json::json!({ "id": id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
@@ -76,7 +80,10 @@ pub async fn list(db: &Database, app_id: Option<&str>, json: bool) -> Result<()>
         None => db.list_all_pending_tasks().await?,
     };
     if json {
-        println!("{}", serde_json::to_string(&tasks).context(error::JsonSnafu)?);
+        println!(
+            "{}",
+            serde_json::to_string(&tasks).context(error::JsonSnafu)?
+        );
     } else {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);

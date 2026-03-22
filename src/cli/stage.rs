@@ -1,8 +1,10 @@
 use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
-use crate::db::{Database, Stage};
-use crate::error::{self, Result};
+use crate::{
+    db::{Database, Stage},
+    error::{self, Result},
+};
 
 pub async fn set(
     db: &Database,
@@ -26,7 +28,10 @@ pub async fn list(db: &Database, app_id: &str, json: bool) -> Result<()> {
     let full_id = db.resolve_app_id(app_id).await?;
     let events = db.list_stage_events(&full_id).await?;
     if json {
-        println!("{}", serde_json::to_string(&events).context(error::JsonSnafu)?);
+        println!(
+            "{}",
+            serde_json::to_string(&events).context(error::JsonSnafu)?
+        );
     } else {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);

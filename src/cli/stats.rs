@@ -1,8 +1,10 @@
 use comfy_table::{Table, presets::UTF8_FULL};
 use snafu::ResultExt as _;
 
-use crate::db::Database;
-use crate::error::{self, Result};
+use crate::{
+    db::Database,
+    error::{self, Result},
+};
 
 pub async fn stats(db: &Database, json: bool) -> Result<()> {
     let s = db.stats().await?;
@@ -66,7 +68,10 @@ pub async fn timeline(db: &Database, id: &str, json: bool) -> Result<()> {
     let full_id = db.resolve_app_id(id).await?;
     let changes = db.get_timeline(&full_id).await?;
     if json {
-        println!("{}", serde_json::to_string(&changes).context(error::JsonSnafu)?);
+        println!(
+            "{}",
+            serde_json::to_string(&changes).context(error::JsonSnafu)?
+        );
     } else {
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);

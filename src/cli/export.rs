@@ -1,7 +1,9 @@
 use snafu::ResultExt as _;
 
-use crate::db::Database;
-use crate::error::{self, Result};
+use crate::{
+    db::Database,
+    error::{self, Result},
+};
 
 fn default_filename(company: &str, position: &str, ext: &str) -> String {
     let name = format!("{company}-{position}")
@@ -25,7 +27,10 @@ pub async fn export(
         let content = db.get_resume_typ(&full_id).await?;
         match content {
             Some(src) => {
-                let path = output.map_or_else(|| default_filename(&app.company, &app.position, "typ"), String::from);
+                let path = output.map_or_else(
+                    || default_filename(&app.company, &app.position, "typ"),
+                    String::from,
+                );
                 std::fs::write(&path, &src).context(error::IoSnafu)?;
                 if json {
                     let out = serde_json::json!({ "exported": path });
@@ -44,7 +49,10 @@ pub async fn export(
         let content = db.get_resume_pdf(&full_id).await?;
         match content {
             Some(bytes) => {
-                let path = output.map_or_else(|| default_filename(&app.company, &app.position, "pdf"), String::from);
+                let path = output.map_or_else(
+                    || default_filename(&app.company, &app.position, "pdf"),
+                    String::from,
+                );
                 std::fs::write(&path, &bytes).context(error::IoSnafu)?;
                 if json {
                     let out = serde_json::json!({ "exported": path });
@@ -66,21 +74,18 @@ pub async fn export(
     Ok(())
 }
 
-pub async fn import(
-    db: &Database,
-    id: &str,
-    typ_path: &str,
-    json: bool,
-) -> Result<()> {
+pub async fn import(db: &Database, id: &str, typ_path: &str, json: bool) -> Result<()> {
     let full_id = db.resolve_app_id(id).await?;
     let content = std::fs::read_to_string(typ_path).context(error::IoSnafu)?;
 
-    sqlx::query("UPDATE applications SET resume_typ = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2")
-        .bind(&content)
-        .bind(&full_id)
-        .execute(db.pool())
-        .await
-        .context(error::SqlxSnafu)?;
+    sqlx::query(
+        "UPDATE applications SET resume_typ = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+    )
+    .bind(&content)
+    .bind(&full_id)
+    .execute(db.pool())
+    .await
+    .context(error::SqlxSnafu)?;
 
     if json {
         let out = serde_json::json!({ "imported": full_id });
