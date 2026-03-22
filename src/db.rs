@@ -7,8 +7,9 @@ use sqlx::SqlitePool;
 
 use crate::{
     domain::{
-        AppStatus, Application, InterviewOutcome, InterviewRow, InterviewStatus, InterviewType,
-        JobLevel, JobType, Outcome, Stage, StageEvent, Stats, StatusChange, TaskRow, TaskType,
+        AddApplicationParams, AppStatus, Application, InterviewOutcome, InterviewRow,
+        InterviewStatus, InterviewType, ListApplicationParams, Outcome, Stage, StageEvent, Stats,
+        StatusChange, TaskRow, TaskType, UpdateApplicationParams,
     },
     error::{self, Result, TenkiError},
     paths,
@@ -197,27 +198,11 @@ impl Database {
     // -----------------------------------------------------------------------
 
     /// Add a new application and record the initial status change.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn add_application(
-        &self,
-        company: &str,
-        position: &str,
-        jd_url: Option<&str>,
-        jd_text: Option<&str>,
-        location: Option<&str>,
-        status: AppStatus,
-        salary: Option<&str>,
-        job_type: Option<JobType>,
-        job_level: Option<JobLevel>,
-        is_remote: Option<bool>,
-        source: Option<&str>,
-        company_url: Option<&str>,
-        notes: Option<&str>,
-    ) -> Result<String> {
+    pub async fn add_application(&self, params: &AddApplicationParams<'_>) -> Result<String> {
         let id = uuid::Uuid::new_v4().to_string();
-        let status_str = status.as_str();
-        let jt = job_type.map(|v| v.as_str().to_string());
-        let jl = job_level.map(|v| v.as_str().to_string());
+        let status_str = params.status.as_str();
+        let jt = params.job_type.map(|v| v.as_str().to_string());
+        let jl = params.job_level.map(|v| v.as_str().to_string());
 
         sqlx::query(
             "INSERT INTO applications (id, company, position, jd_url, jd_text, location, status, \
@@ -225,19 +210,19 @@ impl Database {
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         )
         .bind(&id)
-        .bind(company)
-        .bind(position)
-        .bind(jd_url)
-        .bind(jd_text)
-        .bind(location)
+        .bind(params.company)
+        .bind(params.position)
+        .bind(params.jd_url)
+        .bind(params.jd_text)
+        .bind(params.location)
         .bind(status_str)
-        .bind(salary)
+        .bind(params.salary)
         .bind(jt.as_deref())
         .bind(jl.as_deref())
-        .bind(is_remote)
-        .bind(source)
-        .bind(company_url)
-        .bind(notes)
+        .bind(params.is_remote)
+        .bind(params.source)
+        .bind(params.company_url)
+        .bind(params.notes)
         .execute(self.pool())
         .await
         .context(error::SqlxSnafu)?;
@@ -354,33 +339,29 @@ impl Database {
     #[allow(clippy::too_many_lines)]
     pub async fn list_applications(
         &self,
-        status: Option<AppStatus>,
-        company: Option<&str>,
-        outcome: Option<Outcome>,
-        stage: Option<Stage>,
-        source: Option<&str>,
+        params: &ListApplicationParams<'_>,
     ) -> Result<Vec<Application>> {
         // Build first query (first 16 columns)
         let mut where_clause = String::from(" WHERE 1=1");
         let mut binds: Vec<String> = Vec::new();
 
-        if let Some(s) = status {
+        if let Some(s) = params.status {
             where_clause.push_str(" AND status = ?");
             binds.push(s.as_str().to_string());
         }
-        if let Some(c) = company {
+        if let Some(c) = params.company {
             where_clause.push_str(" AND company LIKE ?");
             binds.push(format!("%{c}%"));
         }
-        if let Some(o) = outcome {
+        if let Some(o) = params.outcome {
             where_clause.push_str(" AND outcome = ?");
             binds.push(o.as_str().to_string());
         }
-        if let Some(st) = stage {
+        if let Some(st) = params.stage {
             where_clause.push_str(" AND stage = ?");
             binds.push(st.as_str().to_string());
         }
-        if let Some(src) = source {
+        if let Some(src) = params.source {
             where_clause.push_str(" AND source LIKE ?");
             binds.push(format!("%{src}%"));
         }
@@ -522,28 +503,10 @@ impl Database {
     }
 
     /// Update only the provided fields on an application.
-    #[allow(clippy::too_many_arguments)]
     pub async fn update_application_fields(
         &self,
         id: &str,
-        company: Option<&str>,
-        position: Option<&str>,
-        location: Option<&str>,
-        jd_url: Option<&str>,
-        jd_text: Option<&str>,
-        salary: Option<&str>,
-        job_type: Option<&str>,
-        job_level: Option<&str>,
-        is_remote: Option<bool>,
-        skills: Option<&str>,
-        experience_range: Option<&str>,
-        source: Option<&str>,
-        company_url: Option<&str>,
-        notes: Option<&str>,
-        tailored_summary: Option<&str>,
-        tailored_headline: Option<&str>,
-        tailored_skills: Option<&str>,
-        applied_at: Option<&str>,
+        params: &UpdateApplicationParams<'_>,
     ) -> Result<()> {
         // Ensure the application exists first.
         let _ = self.get_application(id).await?;
@@ -560,26 +523,26 @@ impl Database {
             };
         }
 
-        push_field!("company", company);
-        push_field!("position", position);
-        push_field!("location", location);
-        push_field!("jd_url", jd_url);
-        push_field!("jd_text", jd_text);
-        push_field!("salary", salary);
-        push_field!("job_type", job_type);
-        push_field!("job_level", job_level);
-        push_field!("skills", skills);
-        push_field!("experience_range", experience_range);
-        push_field!("source", source);
-        push_field!("company_url", company_url);
-        push_field!("notes", notes);
-        push_field!("tailored_summary", tailored_summary);
-        push_field!("tailored_headline", tailored_headline);
-        push_field!("tailored_skills", tailored_skills);
-        push_field!("applied_at", applied_at);
+        push_field!("company", params.company);
+        push_field!("position", params.position);
+        push_field!("location", params.location);
+        push_field!("jd_url", params.jd_url);
+        push_field!("jd_text", params.jd_text);
+        push_field!("salary", params.salary);
+        push_field!("job_type", params.job_type);
+        push_field!("job_level", params.job_level);
+        push_field!("skills", params.skills);
+        push_field!("experience_range", params.experience_range);
+        push_field!("source", params.source);
+        push_field!("company_url", params.company_url);
+        push_field!("notes", params.notes);
+        push_field!("tailored_summary", params.tailored_summary);
+        push_field!("tailored_headline", params.tailored_headline);
+        push_field!("tailored_skills", params.tailored_skills);
+        push_field!("applied_at", params.applied_at);
 
         // is_remote needs special handling (bool -> integer)
-        if let Some(v) = is_remote {
+        if let Some(v) = params.is_remote {
             sets.push("is_remote = ?".to_string());
             binds.push(if v { "1".to_string() } else { "0".to_string() });
         }
