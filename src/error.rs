@@ -37,6 +37,12 @@ pub enum TenkiError {
 
     #[snafu(display("ambiguous id prefix: {prefix} matches multiple records"))]
     AmbiguousId { prefix: String },
+
+    #[snafu(display("invalid date format: {input} — expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"))]
+    InvalidDate { input: String },
+
+    #[snafu(display("invalid URL: {input} — expected http:// or https://"))]
+    InvalidUrl { input: String },
 }
 
 pub type Result<T> = std::result::Result<T, TenkiError>;

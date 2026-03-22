@@ -123,3 +123,50 @@ fn app_list_with_filters() {
         .stdout(predicate::str::contains("Google"))
         .stdout(predicate::str::contains("Meta").not());
 }
+
+#[test]
+fn app_add_rejects_invalid_url() {
+    let tmp = common::tenki_initialized();
+    common::tenki_with(&tmp)
+        .args([
+            "app",
+            "add",
+            "--company",
+            "X",
+            "--position",
+            "Y",
+            "--jd-url",
+            "not-a-url",
+            "--json",
+        ])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("invalid URL"));
+}
+
+#[test]
+fn interview_add_rejects_invalid_date() {
+    let tmp = common::tenki_initialized();
+    let out = common::tenki_with(&tmp)
+        .args(["app", "add", "--company", "X", "--position", "Y", "--json"])
+        .output()
+        .expect("run");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+    let app_id = &v["id"].as_str().expect("id")[..8];
+
+    common::tenki_with(&tmp)
+        .args([
+            "interview",
+            "add",
+            "--app-id",
+            app_id,
+            "--round",
+            "1",
+            "--scheduled-at",
+            "not-a-date",
+            "--json",
+        ])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("invalid date"));
+}
