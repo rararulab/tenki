@@ -19,12 +19,16 @@ async fn main() {
         )
         .init();
 
+    let json_mode = std::env::args().any(|a| a == "--json");
     if let Err(e) = run().await {
-        eprintln!("Error: {e}");
-        println!(
-            "{}",
-            serde_json::json!({"ok": false, "error": e.to_string()})
-        );
+        if json_mode {
+            println!(
+                "{}",
+                serde_json::json!({"ok": false, "error": e.to_string()})
+            );
+        } else {
+            eprintln!("Error: {e}");
+        }
         std::process::exit(1);
     }
 }
