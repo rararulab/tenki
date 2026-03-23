@@ -15,7 +15,7 @@ pub struct DiscoverParams {
 }
 
 /// A job discovered from an external source.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 pub struct DiscoveredJob {
     /// Job title.
     pub title: String,
