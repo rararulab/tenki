@@ -80,9 +80,20 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
             }
         }
-        Command::Tailor { id, json, backend } => {
-            let full_id = db.resolve_app_id(&id).await?;
-            cli::tailor::run(&db, &full_id, json, backend.as_deref()).await?;
+        Command::Tailor {
+            id,
+            json,
+            backend,
+            untailored,
+            top_n,
+        } => {
+            if untailored {
+                cli::tailor::run_batch(&db, top_n, json, backend.as_deref()).await?;
+            } else {
+                let id = id.ok_or("application ID required when not using --untailored")?;
+                let full_id = db.resolve_app_id(&id).await?;
+                cli::tailor::run(&db, &full_id, json, backend.as_deref()).await?;
+            }
         }
         Command::Export {
             id,

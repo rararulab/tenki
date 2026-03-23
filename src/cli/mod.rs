@@ -81,14 +81,20 @@ pub enum Command {
     },
     /// Tailor resume for a specific job
     Tailor {
-        /// Application ID (8-char prefix or full UUID)
-        id:      String,
+        /// Application ID (8-char prefix or full UUID). Required unless --untailored.
+        id:         Option<String>,
+        /// Tailor all scored but untailored applications (batch mode)
+        #[arg(long)]
+        untailored: bool,
+        /// Limit batch to top N (default: all)
+        #[arg(long)]
+        top_n:      Option<usize>,
         /// Output as JSON
         #[arg(long)]
-        json:    bool,
+        json:       bool,
         /// Override agent backend (e.g., "claude", "gemini")
         #[arg(long)]
-        backend: Option<String>,
+        backend:    Option<String>,
     },
     /// Export resume (typ or PDF)
     Export {

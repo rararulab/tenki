@@ -397,7 +397,6 @@ impl Database {
     }
 
     /// List applications that are scored but have no `tailored_summary`.
-    #[allow(dead_code)] // wired in Task 6 (batch tailor)
     pub async fn list_untailored(&self) -> Result<Vec<Application>> {
         let sql = format!(
             "SELECT {APPLICATION_COLUMNS} FROM applications \

@@ -36,6 +36,52 @@ struct TailoringResponse {
     skills:   String,
 }
 
+/// Run batch tailoring on all untailored applications.
+pub async fn run_batch(
+    db: &Database,
+    top_n: Option<usize>,
+    json: bool,
+    backend_override: Option<&str>,
+) -> Result<()> {
+    let apps = db.list_untailored().await?;
+    let apps: Vec<_> = match top_n {
+        Some(n) => apps.into_iter().take(n).collect(),
+        None => apps,
+    };
+
+    if apps.is_empty() {
+        if json {
+            println!(r#"{{"ok":true,"action":"tailor_batch","tailored":0}}"#);
+        } else {
+            eprintln!("No untailored applications found.");
+        }
+        return Ok(());
+    }
+
+    eprintln!("Tailoring {} applications...", apps.len());
+    let mut tailored = 0usize;
+
+    for app in &apps {
+        eprintln!("  → {} @ {} ...", app.position, app.company);
+        run(db, &app.id, false, backend_override).await?;
+        tailored += 1;
+    }
+
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string(&serde_json::json!({
+                "ok": true, "action": "tailor_batch", "tailored": tailored
+            }))
+            .context(crate::error::JsonSnafu)?
+        );
+    } else {
+        eprintln!("Batch complete: {tailored} applications tailored.");
+    }
+
+    Ok(())
+}
+
 /// Run the tailor command for a given application.
 pub async fn run(
     db: &Database,
