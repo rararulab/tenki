@@ -1,5 +1,6 @@
 //! Integration tests for `tenki pipeline`.
 
+mod common;
 use std::process::Command;
 
 fn tenki() -> Command { Command::new(env!("CARGO_BIN_EXE_tenki")) }
@@ -20,7 +21,8 @@ fn pipeline_run_help_shows_options() {
 
 #[test]
 fn pipeline_run_missing_query_fails() {
-    let output = tenki()
+    let tmp = common::tenki_initialized();
+    let output = common::tenki_with(&tmp)
         .args(["pipeline", "run", "--json"])
         .output()
         .expect("failed to run tenki");
