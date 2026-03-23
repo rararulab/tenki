@@ -1,4 +1,5 @@
-//! `OpenCLI` adapter — discovers jobs via `opencli boss search` / `opencli linkedin search`.
+//! `OpenCLI` adapter — discovers jobs via `opencli boss search` / `opencli
+//! linkedin search`.
 
 use serde::Deserialize;
 use snafu::ResultExt as _;
@@ -11,13 +12,9 @@ use crate::error::{self, Result, TenkiError};
 pub struct OpenCliExtractor;
 
 impl Extractor for OpenCliExtractor {
-    fn name(&self) -> &'static str {
-        "opencli"
-    }
+    fn name(&self) -> &'static str { "opencli" }
 
-    fn sources(&self) -> &[&str] {
-        &["boss", "linkedin"]
-    }
+    fn sources(&self) -> &[&str] { &["boss", "linkedin"] }
 
     async fn discover(&self, params: &DiscoverParams) -> Result<Vec<DiscoveredJob>> {
         let mut all_jobs = Vec::new();
@@ -60,8 +57,7 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let raw_jobs: Vec<RawOpenCliJob> =
-        serde_json::from_str(&stdout).context(error::JsonSnafu)?;
+    let raw_jobs: Vec<RawOpenCliJob> = serde_json::from_str(&stdout).context(error::JsonSnafu)?;
 
     Ok(raw_jobs
         .into_iter()
@@ -116,8 +112,7 @@ mod tests {
             }
         ]"#;
         let raw: Vec<RawOpenCliJob> = serde_json::from_str(json).unwrap();
-        let jobs: Vec<DiscoveredJob> =
-            raw.into_iter().map(|r| r.into_discovered("boss")).collect();
+        let jobs: Vec<DiscoveredJob> = raw.into_iter().map(|r| r.into_discovered("boss")).collect();
 
         assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].title, "Rust Developer");
@@ -139,8 +134,10 @@ mod tests {
             }
         ]"#;
         let raw: Vec<RawOpenCliJob> = serde_json::from_str(json).unwrap();
-        let jobs: Vec<DiscoveredJob> =
-            raw.into_iter().map(|r| r.into_discovered("linkedin")).collect();
+        let jobs: Vec<DiscoveredJob> = raw
+            .into_iter()
+            .map(|r| r.into_discovered("linkedin"))
+            .collect();
 
         assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].title, "Backend Engineer");

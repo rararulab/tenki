@@ -5,21 +5,21 @@ use crate::{
     db::Database,
     domain::ListApplicationParams,
     error::Result,
-    extractor::{opencli, DiscoverParams, Extractor},
+    extractor::{DiscoverParams, Extractor, opencli},
     pipeline::{PipelineConfig, PipelineSummary},
 };
 
 /// Execute the full pipeline: discover → score → tailor → export.
 pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<PipelineSummary> {
     let mut summary = PipelineSummary {
-        ok: true,
-        action: "pipeline_run",
-        discovered: 0,
-        imported: 0,
-        scored: 0,
+        ok:              true,
+        action:          "pipeline_run",
+        discovered:      0,
+        imported:        0,
+        scored:          0,
         above_threshold: 0,
-        tailored: 0,
-        exported: 0,
+        tailored:        0,
+        exported:        0,
     };
 
     // Step 1: Discover

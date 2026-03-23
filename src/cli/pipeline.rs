@@ -1,11 +1,12 @@
-//! Pipeline CLI command — runs the full discover -> score -> tailor -> export chain.
+//! Pipeline CLI command — runs the full discover -> score -> tailor -> export
+//! chain.
 
 use snafu::ResultExt as _;
 
 use crate::{
     db::Database,
     error::Result,
-    pipeline::{steps, PipelineConfig},
+    pipeline::{PipelineConfig, steps},
 };
 
 /// Run the full pipeline with the given configuration.

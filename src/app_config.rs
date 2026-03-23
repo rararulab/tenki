@@ -25,11 +25,11 @@ pub struct AppConfig {
 #[serde(default)]
 pub struct ResumeConfig {
     /// Path to the resume git repository.
-    pub repo_path: Option<String>,
+    pub repo_path:     Option<String>,
     /// Command to build the resume PDF (e.g. "make pdf").
     pub build_command: Option<String>,
     /// Relative path to the built PDF within the repo.
-    pub output_path: Option<String>,
+    pub output_path:   Option<String>,
 }
 
 /// Default values applied when creating new applications.

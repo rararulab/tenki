@@ -2,9 +2,7 @@
 
 use std::process::Command;
 
-fn tenki() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_tenki"))
-}
+fn tenki() -> Command { Command::new(env!("CARGO_BIN_EXE_tenki")) }
 
 #[test]
 fn discover_missing_query_shows_error() {

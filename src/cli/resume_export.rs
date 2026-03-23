@@ -1,6 +1,7 @@
 //! Resume export — agent-driven resume editing + PDF build.
 //!
-//! Flow: read tailored content -> agent edits resume source -> build PDF -> store -> git restore.
+//! Flow: read tailored content -> agent edits resume source -> build PDF ->
+//! store -> git restore.
 
 use std::path::Path;
 

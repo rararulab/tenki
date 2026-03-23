@@ -59,8 +59,15 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             limit,
             json,
         } => {
-            cli::discover::run(&db, source.as_deref(), &query, location.as_deref(), limit, json)
-                .await?;
+            cli::discover::run(
+                &db,
+                source.as_deref(),
+                &query,
+                location.as_deref(),
+                limit,
+                json,
+            )
+            .await?;
         }
         Command::App(cmd) => handle_app(&db, cmd).await?,
         Command::Interview(cmd) => handle_interview(&db, cmd).await?,

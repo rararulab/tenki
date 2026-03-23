@@ -239,11 +239,12 @@ impl CliExecutor {
     #[cfg(not(unix))]
     fn terminate_child(child: &mut tokio::process::Child) { let _ = child.start_kill(); }
 
-    /// Executes a prompt without streaming, with optional timeout and working directory.
+    /// Executes a prompt without streaming, with optional timeout and working
+    /// directory.
     ///
     /// When `cwd` is `Some`, the child process spawns in that directory instead
-    /// of the caller's current directory. This is used by the resume-export flow
-    /// so the agent edits files inside the resume repository.
+    /// of the caller's current directory. This is used by the resume-export
+    /// flow so the agent edits files inside the resume repository.
     pub async fn execute_capture_with_cwd(
         &self,
         prompt: &str,

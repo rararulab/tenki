@@ -66,7 +66,8 @@ pub enum Command {
     Stage(StageCommand),
     /// Analyze job fit using AI agent
     Analyze {
-        /// Application ID (8-char prefix or full UUID). Required unless --unscored.
+        /// Application ID (8-char prefix or full UUID). Required unless
+        /// --unscored.
         id:       Option<String>,
         /// Score all unscored applications (batch mode)
         #[arg(long)]
@@ -83,7 +84,8 @@ pub enum Command {
     },
     /// Tailor resume for a specific job
     Tailor {
-        /// Application ID (8-char prefix or full UUID). Required unless --untailored.
+        /// Application ID (8-char prefix or full UUID). Required unless
+        /// --untailored.
         id:         Option<String>,
         /// Tailor all scored but untailored applications (batch mode)
         #[arg(long)]
