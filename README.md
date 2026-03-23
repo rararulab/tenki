@@ -116,6 +116,16 @@ Pipeline steps:
 Goal: a synthetic 3-year Python candidate targeting Tokyo LLM/AI roles.
 This walkthrough stops after tailoring (pre-application review).
 
+Runnable example script (recommended):
+
+```bash
+./examples/pipeline-demo.sh
+# optional overrides
+QUERY="python llm ai" LOCATION="Tokyo" ./examples/pipeline-demo.sh
+```
+
+Equivalent step-by-step commands:
+
 ```bash
 # 1) Configure resume repo (kept for later export/apply phase)
 tenki config set resume.repo_path ~/code/fake-resume
