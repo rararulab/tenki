@@ -65,9 +65,20 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Command::Interview(cmd) => handle_interview(&db, cmd).await?,
         Command::Task(cmd) => handle_task(&db, cmd).await?,
         Command::Stage(cmd) => handle_stage(&db, cmd).await?,
-        Command::Analyze { id, json, backend } => {
-            let full_id = db.resolve_app_id(&id).await?;
-            cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
+        Command::Analyze {
+            id,
+            json,
+            backend,
+            unscored,
+            top_n,
+        } => {
+            if unscored {
+                cli::analyze::run_batch(&db, top_n, json, backend.as_deref()).await?;
+            } else {
+                let id = id.ok_or("application ID required when not using --unscored")?;
+                let full_id = db.resolve_app_id(&id).await?;
+                cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
+            }
         }
         Command::Tailor { id, json, backend } => {
             let full_id = db.resolve_app_id(&id).await?;

@@ -383,7 +383,6 @@ impl Database {
     }
 
     /// List applications that have no `fitness_score`.
-    #[allow(dead_code)] // wired in Task 5 (batch analyze)
     pub async fn list_unscored(&self) -> Result<Vec<Application>> {
         let sql = format!(
             "SELECT {APPLICATION_COLUMNS} FROM applications \

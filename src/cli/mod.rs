@@ -64,14 +64,20 @@ pub enum Command {
     Stage(StageCommand),
     /// Analyze job fit using AI agent
     Analyze {
-        /// Application ID (8-char prefix or full UUID)
-        id:      String,
+        /// Application ID (8-char prefix or full UUID). Required unless --unscored.
+        id:       Option<String>,
+        /// Score all unscored applications (batch mode)
+        #[arg(long)]
+        unscored: bool,
+        /// Limit batch to top N (default: all)
+        #[arg(long)]
+        top_n:    Option<usize>,
         /// Output as JSON
         #[arg(long)]
-        json:    bool,
+        json:     bool,
         /// Override agent backend (e.g., "claude", "gemini")
         #[arg(long)]
-        backend: Option<String>,
+        backend:  Option<String>,
     },
     /// Tailor resume for a specific job
     Tailor {
