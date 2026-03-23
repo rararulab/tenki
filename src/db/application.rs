@@ -382,10 +382,10 @@ impl Database {
         Ok(Some(id))
     }
 
-    /// Store a compiled resume PDF for an application and mark as ready.
+    /// Store a compiled resume PDF for an application.
     pub async fn store_resume_pdf(&self, id: &str, pdf_bytes: &[u8]) -> Result<()> {
         let result = sqlx::query(
-            "UPDATE applications SET resume_pdf = ?1, status = 'ready', \
+            "UPDATE applications SET resume_pdf = ?1, \
              updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         )
         .bind(pdf_bytes)

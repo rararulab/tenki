@@ -13,7 +13,7 @@ use crate::error::Result;
 /// Trait for job discovery backends.
 pub trait Extractor: Send + Sync {
     /// Human-readable name of this extractor.
-    #[allow(dead_code)] // used in Task 7 (pipeline orchestrator)
+    #[allow(dead_code)] // part of trait contract; not yet called by pipeline
     fn name(&self) -> &'static str;
     /// Supported source identifiers (e.g. `"boss"`, `"linkedin"`).
     fn sources(&self) -> &[&str];
