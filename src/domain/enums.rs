@@ -21,6 +21,7 @@ pub enum AppStatus {
 }
 
 impl AppStatus {
+    /// Returns the lowercase string representation of this status.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -74,6 +75,7 @@ pub enum InterviewType {
 }
 
 impl InterviewType {
+    /// Returns the kebab-case string representation of this interview type.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -101,6 +103,7 @@ pub enum InterviewStatus {
 }
 
 impl InterviewStatus {
+    /// Returns the lowercase string representation of this interview status.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -131,6 +134,7 @@ pub enum Outcome {
 }
 
 impl Outcome {
+    /// Returns the `snake_case` string representation of this outcome.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -183,6 +187,7 @@ pub enum Stage {
 }
 
 impl Stage {
+    /// Returns the `snake_case` string representation of this stage.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -235,6 +240,7 @@ pub enum JobType {
 }
 
 impl JobType {
+    /// Returns the `snake_case` string representation of this job type.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -279,6 +285,7 @@ pub enum JobLevel {
 }
 
 impl JobLevel {
+    /// Returns the lowercase string representation of this job level.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -327,6 +334,7 @@ pub enum TaskType {
 }
 
 impl TaskType {
+    /// Returns the `snake_case` string representation of this task type.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -369,6 +377,7 @@ pub enum InterviewOutcome {
 }
 
 impl InterviewOutcome {
+    /// Returns the lowercase string representation of this interview outcome.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {

@@ -2,6 +2,7 @@
 
 use snafu::Snafu;
 
+/// Top-level error type for the tenki application.
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]
 pub enum TenkiError {
@@ -53,4 +54,5 @@ pub enum TenkiError {
     MissingJdText { id: String },
 }
 
+/// Convenience result type for tenki operations.
 pub type Result<T> = std::result::Result<T, TenkiError>;
