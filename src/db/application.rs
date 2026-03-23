@@ -382,6 +382,24 @@ impl Database {
         Ok(Some(id))
     }
 
+    /// Store a compiled resume PDF for an application and mark as ready.
+    pub async fn store_resume_pdf(&self, id: &str, pdf_bytes: &[u8]) -> Result<()> {
+        let result = sqlx::query(
+            "UPDATE applications SET resume_pdf = ?1, status = 'ready', \
+             updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        )
+        .bind(pdf_bytes)
+        .bind(id)
+        .execute(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
+
+        if result.rows_affected() == 0 {
+            return Err(TenkiError::ApplicationNotFound { id: id.to_string() });
+        }
+        Ok(())
+    }
+
     /// List applications that have no `fitness_score`.
     pub async fn list_unscored(&self) -> Result<Vec<Application>> {
         let sql = format!(

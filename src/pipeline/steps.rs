@@ -97,11 +97,20 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         eprintln!("  -> {} tailored", summary.tailored);
     }
 
-    // Step 5: Export (placeholder — implemented in Task 9)
+    // Step 5: Export tailored resumes as PDFs
     if config.skip_export {
         eprintln!("[5/5] Export skipped");
     } else {
-        eprintln!("[5/5] Export not yet implemented -- skipping");
+        eprintln!("[5/5] Exporting resumes...");
+        for app in &qualified {
+            if app.tailored_summary.is_some() {
+                let fresh_app = db.get_application(&app.id).await?;
+                cli::resume_export::export_one(db, &fresh_app).await?;
+                summary.exported += 1;
+                eprintln!("  -> {} @ {} done", app.position, app.company);
+            }
+        }
+        eprintln!("  -> {} exported", summary.exported);
     }
 
     Ok(summary)

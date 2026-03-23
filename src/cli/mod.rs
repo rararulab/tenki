@@ -4,6 +4,7 @@ pub mod discover;
 pub mod export;
 pub mod interview;
 pub mod pipeline;
+pub mod resume_export;
 pub mod stage;
 pub mod stats;
 pub mod tailor;

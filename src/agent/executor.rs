@@ -239,6 +239,59 @@ impl CliExecutor {
     #[cfg(not(unix))]
     fn terminate_child(child: &mut tokio::process::Child) { let _ = child.start_kill(); }
 
+    /// Executes a prompt without streaming, with optional timeout and working directory.
+    ///
+    /// When `cwd` is `Some`, the child process spawns in that directory instead
+    /// of the caller's current directory. This is used by the resume-export flow
+    /// so the agent edits files inside the resume repository.
+    pub async fn execute_capture_with_cwd(
+        &self,
+        prompt: &str,
+        timeout: Option<Duration>,
+        cwd: Option<&std::path::Path>,
+    ) -> std::io::Result<ExecutionResult> {
+        let spec = self.backend.build_command(prompt, false);
+        let mut command = Command::new(&spec.command);
+        command.args(&spec.args);
+        command.stdout(Stdio::piped());
+        command.stderr(Stdio::piped());
+
+        let work_dir = cwd.map_or_else(
+            || std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
+            std::path::PathBuf::from,
+        );
+        command.current_dir(&work_dir);
+        command.envs(self.backend.env_vars.iter().map(|(k, v)| (k, v)));
+
+        if spec.stdin_input.is_some() {
+            command.stdin(Stdio::piped());
+        }
+
+        let mut child = command.spawn()?;
+
+        if let Some(input) = spec.stdin_input.as_deref()
+            && let Some(mut stdin) = child.stdin.take()
+        {
+            tokio::io::AsyncWriteExt::write_all(&mut stdin, input.as_bytes()).await?;
+            drop(stdin);
+        }
+
+        let mut output_sink = std::io::sink();
+        let (accumulated_output, accumulated_stderr, timed_out) = self
+            .read_output(&mut child, &mut output_sink, timeout, false)
+            .await?;
+
+        let status = child.wait().await?;
+
+        Ok(ExecutionResult {
+            output: accumulated_output,
+            stderr: accumulated_stderr,
+            success: status.success() && !timed_out,
+            exit_code: status.code(),
+            timed_out,
+        })
+    }
+
     /// Executes a prompt without streaming (captures all output).
     ///
     /// Uses no timeout by default. For timed execution, use
