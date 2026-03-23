@@ -287,26 +287,6 @@ impl Database {
         Ok(())
     }
 
-    /// Update resume typst source and compiled PDF.
-    #[allow(dead_code)]
-    pub async fn update_resume(&self, id: &str, typ: &str, pdf_bytes: &[u8]) -> Result<()> {
-        let result = sqlx::query(
-            "UPDATE applications SET resume_typ = ?1, resume_pdf = ?2, updated_at = \
-             CURRENT_TIMESTAMP WHERE id = ?3",
-        )
-        .bind(typ)
-        .bind(pdf_bytes)
-        .bind(id)
-        .execute(self.pool())
-        .await
-        .context(error::SqlxSnafu)?;
-
-        if result.rows_affected() == 0 {
-            return Err(TenkiError::ApplicationNotFound { id: id.to_string() });
-        }
-        Ok(())
-    }
-
     /// Update tailored resume fields for an application.
     pub async fn update_tailored(
         &self,

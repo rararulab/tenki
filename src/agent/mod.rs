@@ -11,11 +11,6 @@ pub mod backend;
 pub mod config;
 pub mod executor;
 
-#[allow(unused_imports)]
-pub use backend::{CliBackend, CommandSpec, OutputFormat, PromptMode};
+pub use backend::CliBackend;
 pub use config::AgentConfig;
-#[allow(unused_imports)]
-pub use config::ConfigPromptMode;
 pub use executor::CliExecutor;
-#[allow(unused_imports)]
-pub use executor::ExecutionResult;

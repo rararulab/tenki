@@ -24,14 +24,14 @@ pub struct ExecutionResult {
     /// The full stdout output from the CLI.
     pub output:    String,
     /// Captured stderr output (separate from stdout).
-    #[allow(dead_code)]
-    pub stderr:    String,
+    #[allow(dead_code)] // read in tests; part of the public execution contract
+    pub stderr: String,
     /// Whether the execution succeeded (exit code 0).
     pub success:   bool,
     /// The exit code.
     pub exit_code: Option<i32>,
     /// Whether the execution was terminated due to timeout.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // read in tests; part of the public execution contract
     pub timed_out: bool,
 }
 
@@ -243,7 +243,7 @@ impl CliExecutor {
     ///
     /// Uses no timeout by default. For timed execution, use
     /// `execute_capture_with_timeout`.
-    #[allow(dead_code)]
+    #[allow(dead_code)] // used in tests; convenience wrapper for execute_capture_with_timeout
     pub async fn execute_capture(&self, prompt: &str) -> std::io::Result<ExecutionResult> {
         self.execute_capture_with_timeout(prompt, None).await
     }

@@ -46,22 +46,6 @@ impl Database {
         Ok(id)
     }
 
-    /// Update an interview's status.
-    #[allow(dead_code)]
-    pub async fn update_interview_status(&self, id: &str, status: InterviewStatus) -> Result<()> {
-        let result = sqlx::query("UPDATE interviews SET status = ?1 WHERE id = ?2")
-            .bind(status.as_str())
-            .bind(id)
-            .execute(self.pool())
-            .await
-            .context(error::SqlxSnafu)?;
-
-        if result.rows_affected() == 0 {
-            return Err(TenkiError::InterviewNotFound { id: id.to_string() });
-        }
-        Ok(())
-    }
-
     /// Update interview fields (all optional).
     pub async fn update_interview(
         &self,
