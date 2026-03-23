@@ -35,9 +35,10 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
     }
 
     let mut cmd = Command::new("opencli");
+    let query = normalize_query_for_source(source, &params.query);
     cmd.arg(source)
         .arg("search")
-        .arg(&params.query)
+        .arg(&query)
         .arg("--format")
         .arg("json");
 
@@ -80,6 +81,18 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
         .into_iter()
         .map(|raw| raw.into_discovered(source))
         .collect())
+}
+
+fn normalize_query_for_source(source: &str, query: &str) -> String {
+    let query = query.trim();
+    if source != "boss" {
+        return query.to_string();
+    }
+
+    // BOSS search is less tolerant to multi-keyword free text (e.g. "python llm").
+    // Use the first token for better compatibility while keeping LinkedIn
+    // unchanged.
+    query.split_whitespace().next().unwrap_or(query).to_string()
 }
 
 /// Raw JSON shape returned by opencli search.
@@ -192,5 +205,23 @@ mod tests {
         assert_eq!(job.title, "Dev");
         assert_eq!(job.company, ""); // missing → default
         assert!(job.jd_url.is_none());
+    }
+
+    #[test]
+    fn boss_query_uses_first_token() {
+        assert_eq!(normalize_query_for_source("boss", "python llm"), "python");
+        assert_eq!(
+            normalize_query_for_source("boss", "  python   llm  "),
+            "python"
+        );
+        assert_eq!(normalize_query_for_source("boss", "python"), "python");
+    }
+
+    #[test]
+    fn linkedin_query_keeps_all_tokens() {
+        assert_eq!(
+            normalize_query_for_source("linkedin", "python llm"),
+            "python llm"
+        );
     }
 }
