@@ -2,7 +2,9 @@
 
 use std::process::Command;
 
-fn tenki() -> Command { Command::new(env!("CARGO_BIN_EXE_tenki")) }
+fn tenki() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_tenki"))
+}
 
 #[test]
 fn pipeline_run_help_shows_options() {
@@ -12,6 +14,7 @@ fn pipeline_run_help_shows_options() {
         .expect("failed to run tenki");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("--query"));
+    assert!(stdout.contains("--sources"));
     assert!(stdout.contains("--top-n"));
     assert!(stdout.contains("--min-score"));
     assert!(stdout.contains("--skip-tailor"));
@@ -24,4 +27,6 @@ fn pipeline_run_missing_query_fails() {
         .output()
         .expect("failed to run tenki");
     assert!(!output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("preferences.query"));
 }

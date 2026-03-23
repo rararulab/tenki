@@ -159,13 +159,14 @@ pub enum Command {
 pub enum PipelineCommand {
     /// Run the full automation pipeline
     Run {
-        /// Search query
+        /// Search query (optional when `preferences.query` is configured)
         #[arg(long)]
-        query:       String,
-        /// Source platforms (comma-separated: boss,linkedin)
+        query:       Option<String>,
+        /// Source platforms (comma-separated: boss,linkedin). Defaults to
+        /// `preferences.sources`, then `linkedin`.
         #[arg(long, value_delimiter = ',')]
         sources:     Vec<String>,
-        /// Location filter
+        /// Location filter (optional; falls back to `preferences.location`)
         #[arg(long)]
         location:    Option<String>,
         /// Keep top N after scoring (default: 10)
