@@ -45,15 +45,97 @@ tenki task add --app-id <app-id> --type follow-up "Send thank-you email" \
 
 IDs are 8-character prefixes of the full UUID (shown on creation).
 
+## Automation Pipeline
+
+tenki can automatically discover jobs, score fitness, tailor resumes, and generate PDFs — powered by [OpenCLI](https://github.com/jackwener/opencli) and an LLM agent backend.
+
+### Prerequisites
+
+```bash
+# Install opencli for job discovery
+cargo install opencli
+
+# Configure agent backend (for scoring/tailoring)
+tenki config set agent.backend claude
+```
+
+### Discover Jobs
+
+```bash
+# Discover from all sources (Boss直聘 + LinkedIn)
+tenki discover --query "rust developer" --location "shanghai"
+
+# Single source
+tenki discover --source boss --query "后端开发" --limit 20
+
+# JSON output for scripting
+tenki discover --source linkedin --query "backend engineer" --json
+```
+
+Discovered jobs are imported as applications with status `discovered`. Duplicates (same `jd_url`) are skipped automatically.
+
+### Batch Score & Tailor
+
+```bash
+# Score all unscored applications via LLM (falls back to keyword matching)
+tenki analyze --unscored
+
+# Score top 10 only
+tenki analyze --unscored --top-n 10
+
+# Tailor resumes for all scored but untailored applications
+tenki tailor --untailored
+
+# Single-item mode still works
+tenki analyze <app-id>
+tenki tailor <app-id>
+```
+
+### Full Pipeline
+
+Run the entire flow in one command:
+
+```bash
+tenki pipeline run \
+  --query "rust developer" \
+  --location "shanghai" \
+  --min-score 60 \
+  --top-n 5 \
+  --json
+```
+
+Pipeline steps:
+1. **Discover** — crawl jobs via OpenCLI, import new ones
+2. **Score** — analyze all unscored applications
+3. **Filter** — keep top N above minimum score
+4. **Tailor** — generate tailored resume content (skip with `--skip-tailor`)
+5. **Export** — build PDF resumes via agent (skip with `--skip-export`)
+
+### Resume Export (Optional)
+
+Configure a resume repo for automated PDF generation:
+
+```bash
+tenki config set resume.repo_path /path/to/resume
+tenki config set resume.build_command "make pdf"
+tenki config set resume.output_path "output/resume.pdf"
+```
+
+The export step: agent edits resume source files → build command generates PDF → PDF stored in DB → `git checkout .` restores the repo.
+
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `tenki init` | Initialize the database |
+| `tenki discover` | Discover jobs from external sources via OpenCLI |
 | `tenki app add\|list\|show\|update\|delete` | Manage applications |
 | `tenki interview add\|update\|note\|list` | Track interviews |
 | `tenki task add\|update\|done\|delete\|list` | Manage tasks and reminders |
 | `tenki stage set\|list` | Track stage transitions |
+| `tenki analyze <id>\|--unscored` | Score job fit (single or batch) |
+| `tenki tailor <id>\|--untailored` | Tailor resume (single or batch) |
+| `tenki pipeline run` | Run full automation pipeline |
 | `tenki stats` | Aggregate statistics |
 | `tenki timeline <id>` | Status change history |
 | `tenki export <id> --typ\|--pdf` | Export resume |
