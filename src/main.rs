@@ -399,8 +399,8 @@ async fn handle_pipeline(
 
 #[derive(Debug)]
 struct ResolvedPipelineInputs {
-    query: String,
-    sources: Vec<String>,
+    query:    String,
+    sources:  Vec<String>,
     location: Option<String>,
 }
 
@@ -413,10 +413,9 @@ fn resolve_pipeline_inputs(
     let resolved_query = query
         .or_else(|| cfg.preferences.query.clone())
         .ok_or_else(|| error::TenkiError::Config {
-            message:
-                "pipeline query missing — use --query or set preferences.query via `tenki config \
-                 set`"
-                    .to_string(),
+            message: "pipeline query missing — use --query or set preferences.query via `tenki \
+                      config set`"
+                .to_string(),
         })?;
 
     let resolved_sources = if sources.is_empty() {
@@ -432,8 +431,8 @@ fn resolve_pipeline_inputs(
     let resolved_location = location.or_else(|| cfg.preferences.location.clone());
 
     Ok(ResolvedPipelineInputs {
-        query: resolved_query,
-        sources: resolved_sources,
+        query:    resolved_query,
+        sources:  resolved_sources,
         location: resolved_location,
     })
 }
