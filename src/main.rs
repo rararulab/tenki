@@ -258,8 +258,9 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             let full_id = db.resolve_app_id(&id).await?;
             cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
         }
-        Command::Tailor { id } => {
-            eprintln!("tailor not yet implemented (app: {id})");
+        Command::Tailor { id, json, backend } => {
+            let full_id = db.resolve_app_id(&id).await?;
+            cli::tailor::run(&db, &full_id, json, backend.as_deref()).await?;
         }
         Command::Export {
             id,
