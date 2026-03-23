@@ -338,4 +338,91 @@ impl Database {
 
         Ok(row.map(|r| r.0))
     }
+
+    /// Import a discovered job as a new application if its `jd_url` is not
+    /// already in the DB. Returns `Some(id)` if imported, `None` if
+    /// duplicate.
+    pub async fn import_discovered_job(
+        &self,
+        job: &crate::extractor::DiscoveredJob,
+    ) -> Result<Option<String>> {
+        // Dedup by jd_url if present
+        if let Some(url) = &job.jd_url {
+            let existing: Option<(String,)> =
+                sqlx::query_as("SELECT id FROM applications WHERE jd_url = ?1")
+                    .bind(url)
+                    .fetch_optional(self.pool())
+                    .await
+                    .context(error::SqlxSnafu)?;
+            if existing.is_some() {
+                return Ok(None);
+            }
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let status = "discovered";
+
+        sqlx::query(
+            "INSERT INTO applications (id, company, position, jd_url, jd_text, location, salary, \
+             source, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        )
+        .bind(&id)
+        .bind(&job.company)
+        .bind(&job.title)
+        .bind(&job.jd_url)
+        .bind(&job.jd_text)
+        .bind(&job.location)
+        .bind(&job.salary)
+        .bind(&job.source)
+        .bind(status)
+        .execute(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
+
+        self.record_status_change(&id, "", status, None).await?;
+        Ok(Some(id))
+    }
+
+    /// Store a compiled resume PDF for an application.
+    pub async fn store_resume_pdf(&self, id: &str, pdf_bytes: &[u8]) -> Result<()> {
+        let result = sqlx::query(
+            "UPDATE applications SET resume_pdf = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        )
+        .bind(pdf_bytes)
+        .bind(id)
+        .execute(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
+
+        if result.rows_affected() == 0 {
+            return Err(TenkiError::ApplicationNotFound { id: id.to_string() });
+        }
+        Ok(())
+    }
+
+    /// List applications that have no `fitness_score`.
+    pub async fn list_unscored(&self) -> Result<Vec<Application>> {
+        let sql = format!(
+            "SELECT {APPLICATION_COLUMNS} FROM applications WHERE fitness_score IS NULL AND \
+             jd_text IS NOT NULL ORDER BY created_at DESC"
+        );
+        let rows = sqlx::query_as::<_, ApplicationRow>(&sql)
+            .fetch_all(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
+        Ok(rows.into_iter().map(Application::from).collect())
+    }
+
+    /// List applications that are scored but have no `tailored_summary`.
+    pub async fn list_untailored(&self) -> Result<Vec<Application>> {
+        let sql = format!(
+            "SELECT {APPLICATION_COLUMNS} FROM applications WHERE fitness_score IS NOT NULL AND \
+             tailored_summary IS NULL AND jd_text IS NOT NULL ORDER BY fitness_score DESC"
+        );
+        let rows = sqlx::query_as::<_, ApplicationRow>(&sql)
+            .fetch_all(self.pool())
+            .await
+            .context(error::SqlxSnafu)?;
+        Ok(rows.into_iter().map(Application::from).collect())
+    }
 }

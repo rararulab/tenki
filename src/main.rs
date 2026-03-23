@@ -4,12 +4,14 @@ mod cli;
 mod db;
 mod domain;
 mod error;
+mod extractor;
 mod paths;
+mod pipeline;
 mod store;
 
 use clap::Parser;
 use cli::{
-    AppCommand, Cli, Command, InterviewCommand, StageCommand, TaskCommand,
+    AppCommand, Cli, Command, InterviewCommand, PipelineCommand, StageCommand, TaskCommand,
     interview::{AddInterviewParams, UpdateInterviewParams},
 };
 use domain::{AddApplicationParams, ListApplicationParams, UpdateApplicationParams};
@@ -50,17 +52,56 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             db.init().await?;
             eprintln!("tenki initialized at {}", db.path().display());
         }
+        Command::Discover {
+            source,
+            query,
+            location,
+            limit,
+            json,
+        } => {
+            cli::discover::run(
+                &db,
+                source.as_deref(),
+                &query,
+                location.as_deref(),
+                limit,
+                json,
+            )
+            .await?;
+        }
         Command::App(cmd) => handle_app(&db, cmd).await?,
         Command::Interview(cmd) => handle_interview(&db, cmd).await?,
         Command::Task(cmd) => handle_task(&db, cmd).await?,
         Command::Stage(cmd) => handle_stage(&db, cmd).await?,
-        Command::Analyze { id, json, backend } => {
-            let full_id = db.resolve_app_id(&id).await?;
-            cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
+        Command::Analyze {
+            id,
+            json,
+            backend,
+            unscored,
+            top_n,
+        } => {
+            if unscored {
+                cli::analyze::run_batch(&db, top_n, json, backend.as_deref()).await?;
+            } else {
+                let id = id.ok_or("application ID required when not using --unscored")?;
+                let full_id = db.resolve_app_id(&id).await?;
+                cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
+            }
         }
-        Command::Tailor { id, json, backend } => {
-            let full_id = db.resolve_app_id(&id).await?;
-            cli::tailor::run(&db, &full_id, json, backend.as_deref()).await?;
+        Command::Tailor {
+            id,
+            json,
+            backend,
+            untailored,
+            top_n,
+        } => {
+            if untailored {
+                cli::tailor::run_batch(&db, top_n, json, backend.as_deref()).await?;
+            } else {
+                let id = id.ok_or("application ID required when not using --untailored")?;
+                let full_id = db.resolve_app_id(&id).await?;
+                cli::tailor::run(&db, &full_id, json, backend.as_deref()).await?;
+            }
         }
         Command::Export {
             id,
@@ -80,6 +121,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Command::Timeline { id, json } => {
             cli::stats::timeline(&db, &id, json).await?;
         }
+        Command::Pipeline(cmd) => handle_pipeline(&db, cmd).await?,
         Command::Config { action } => handle_config(action)?,
     }
 
@@ -322,6 +364,37 @@ async fn handle_stage(
     Ok(())
 }
 
+/// Dispatch pipeline subcommands.
+async fn handle_pipeline(
+    db: &db::Database,
+    cmd: PipelineCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        PipelineCommand::Run {
+            query,
+            sources,
+            location,
+            top_n,
+            min_score,
+            skip_tailor,
+            skip_export,
+            json,
+        } => {
+            let config = pipeline::PipelineConfig::builder()
+                .query(query)
+                .sources(sources)
+                .maybe_location(location)
+                .top_n(top_n)
+                .min_score(min_score)
+                .skip_tailor(skip_tailor)
+                .skip_export(skip_export)
+                .build();
+            cli::pipeline::run(db, &config, json).await?;
+        }
+    }
+    Ok(())
+}
+
 /// Dispatch config subcommands.
 fn handle_config(action: cli::ConfigAction) -> std::result::Result<(), Box<dyn std::error::Error>> {
     match action {
@@ -376,6 +449,9 @@ fn set_config_field(
                 .parse()
                 .map_err(|_| format!("invalid integer for idle_timeout_secs: {value}"))?;
         }
+        "resume.repo_path" => cfg.resume.repo_path = Some(value.to_string()),
+        "resume.build_command" => cfg.resume.build_command = Some(value.to_string()),
+        "resume.output_path" => cfg.resume.output_path = Some(value.to_string()),
         _ => return Err(format!("unknown config key: {key}").into()),
     }
     Ok(())
@@ -389,6 +465,9 @@ fn get_config_field(cfg: &app_config::AppConfig, key: &str) -> Option<String> {
         "display.date_format" => Some(cfg.display.date_format.clone()),
         "agent.backend" => Some(cfg.agent.backend.clone()),
         "agent.idle_timeout_secs" => Some(cfg.agent.idle_timeout_secs.to_string()),
+        "resume.repo_path" => cfg.resume.repo_path.clone(),
+        "resume.build_command" => cfg.resume.build_command.clone(),
+        "resume.output_path" => cfg.resume.output_path.clone(),
         _ => None,
     }
 }
@@ -409,6 +488,18 @@ fn config_as_map(cfg: &app_config::AppConfig) -> Vec<(String, String)> {
         (
             "agent.idle_timeout_secs".to_string(),
             cfg.agent.idle_timeout_secs.to_string(),
+        ),
+        (
+            "resume.repo_path".to_string(),
+            cfg.resume.repo_path.clone().unwrap_or_default(),
+        ),
+        (
+            "resume.build_command".to_string(),
+            cfg.resume.build_command.clone().unwrap_or_default(),
+        ),
+        (
+            "resume.output_path".to_string(),
+            cfg.resume.output_path.clone().unwrap_or_default(),
         ),
     ]
 }

@@ -10,6 +10,7 @@ use crate::error::TenkiError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AppStatus {
+    Discovered,
     Bookmarked,
     Applied,
     Screening,
@@ -25,6 +26,7 @@ impl AppStatus {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::Discovered => "discovered",
             Self::Bookmarked => "bookmarked",
             Self::Applied => "applied",
             Self::Screening => "screening",
@@ -46,6 +48,7 @@ impl FromStr for AppStatus {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
+            "discovered" => Ok(Self::Discovered),
             "bookmarked" => Ok(Self::Bookmarked),
             "applied" => Ok(Self::Applied),
             "screening" => Ok(Self::Screening),

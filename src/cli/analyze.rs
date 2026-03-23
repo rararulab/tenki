@@ -101,6 +101,52 @@ pub async fn run(
     Ok(())
 }
 
+/// Run batch analysis on all unscored applications.
+pub async fn run_batch(
+    db: &Database,
+    top_n: Option<usize>,
+    json: bool,
+    backend_override: Option<&str>,
+) -> Result<()> {
+    let apps = db.list_unscored().await?;
+    let apps: Vec<_> = match top_n {
+        Some(n) => apps.into_iter().take(n).collect(),
+        None => apps,
+    };
+
+    if apps.is_empty() {
+        if json {
+            println!(r#"{{"ok":true,"action":"analyze_batch","scored":0}}"#);
+        } else {
+            eprintln!("No unscored applications found.");
+        }
+        return Ok(());
+    }
+
+    eprintln!("Scoring {} applications...", apps.len());
+    let mut scored = 0usize;
+
+    for app in &apps {
+        eprintln!("  → {} @ {} ...", app.position, app.company);
+        run(db, &app.id, false, backend_override).await?;
+        scored += 1;
+    }
+
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string(&serde_json::json!({
+                "ok": true, "action": "analyze_batch", "scored": scored
+            }))
+            .context(crate::error::JsonSnafu)?
+        );
+    } else {
+        eprintln!("Batch complete: {scored} applications scored.");
+    }
+
+    Ok(())
+}
+
 /// Build the scoring prompt for the agent CLI.
 fn build_prompt(position: &str, jd_text: &str, skills: Option<&str>) -> String {
     let skills_section = skills

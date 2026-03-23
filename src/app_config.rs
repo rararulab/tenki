@@ -16,6 +16,20 @@ pub struct AppConfig {
     pub display:  DisplayConfig,
     /// Agent backend configuration.
     pub agent:    crate::agent::AgentConfig,
+    /// Resume repository configuration.
+    pub resume:   ResumeConfig,
+}
+
+/// Resume repository configuration for automated PDF generation.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ResumeConfig {
+    /// Path to the resume git repository.
+    pub repo_path:     Option<String>,
+    /// Command to build the resume PDF (e.g. "make pdf").
+    pub build_command: Option<String>,
+    /// Relative path to the built PDF within the repo.
+    pub output_path:   Option<String>,
 }
 
 /// Default values applied when creating new applications.
