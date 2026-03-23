@@ -36,6 +36,88 @@ fn app_add_and_list_json() {
 }
 
 #[test]
+fn app_add_default_bookmarked_has_null_stage() {
+    let tmp = common::tenki_initialized();
+    common::tenki_with(&tmp)
+        .args([
+            "app",
+            "add",
+            "--company",
+            "NullStageCo",
+            "--position",
+            "Python Engineer",
+            "--json",
+        ])
+        .assert()
+        .success();
+
+    let output = common::tenki_with(&tmp)
+        .args(["app", "list", "--company", "NullStageCo", "--json"])
+        .output()
+        .expect("run");
+    let apps: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
+    let app = &apps.as_array().expect("array")[0];
+    assert_eq!(app["status"], "bookmarked");
+    assert!(app["stage"].is_null());
+}
+
+#[test]
+fn app_add_applied_status_sets_applied_stage() {
+    let tmp = common::tenki_initialized();
+    common::tenki_with(&tmp)
+        .args([
+            "app",
+            "add",
+            "--company",
+            "AppliedStageCo",
+            "--position",
+            "ML Engineer",
+            "--status",
+            "applied",
+            "--json",
+        ])
+        .assert()
+        .success();
+
+    let output = common::tenki_with(&tmp)
+        .args(["app", "list", "--company", "AppliedStageCo", "--json"])
+        .output()
+        .expect("run");
+    let apps: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
+    let app = &apps.as_array().expect("array")[0];
+    assert_eq!(app["status"], "applied");
+    assert_eq!(app["stage"], "applied");
+}
+
+#[test]
+fn app_add_discovered_status_has_null_stage() {
+    let tmp = common::tenki_initialized();
+    common::tenki_with(&tmp)
+        .args([
+            "app",
+            "add",
+            "--company",
+            "DiscoveredStageCo",
+            "--position",
+            "LLM Engineer",
+            "--status",
+            "discovered",
+            "--json",
+        ])
+        .assert()
+        .success();
+
+    let output = common::tenki_with(&tmp)
+        .args(["app", "list", "--company", "DiscoveredStageCo", "--json"])
+        .output()
+        .expect("run");
+    let apps: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
+    let app = &apps.as_array().expect("array")[0];
+    assert_eq!(app["status"], "discovered");
+    assert!(app["stage"].is_null());
+}
+
+#[test]
 fn app_show_update_delete() {
     let tmp = common::tenki_initialized();
     // Add

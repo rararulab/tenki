@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS applications (
     jd_text TEXT,
     location TEXT,
     status TEXT NOT NULL DEFAULT 'bookmarked',
-    stage TEXT DEFAULT 'applied',
+    stage TEXT,
     outcome TEXT,
     fitness_score REAL,
     fitness_notes TEXT,
