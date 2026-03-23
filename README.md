@@ -116,12 +116,12 @@ Pipeline steps:
 Goal: a synthetic 3-year Python candidate targeting Tokyo LLM/AI roles.
 This walkthrough stops after tailoring (pre-application review).
 
-Runnable example script (recommended):
+Runnable Rust example (recommended):
 
 ```bash
-./examples/pipeline-demo.sh
+cargo run --example pipeline_demo
 # optional overrides
-QUERY="python llm ai" LOCATION="Tokyo" ./examples/pipeline-demo.sh
+QUERY="python llm ai" LOCATION="Tokyo" cargo run --example pipeline_demo
 ```
 
 Equivalent step-by-step commands:
