@@ -33,14 +33,23 @@ pub async fn export(
                 );
                 std::fs::write(&path, &src).context(error::IoSnafu)?;
                 if json {
-                    let out = serde_json::json!({ "exported": path });
-                    println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
+                    println!(
+                        "{}",
+                        serde_json::json!({"ok": true, "format": "typ", "exported": path})
+                    );
                 } else {
                     eprintln!("Exported typ to {path}");
                 }
             }
             None => {
-                eprintln!("No resume typ found for application {}", &full_id[..8]);
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::json!({"ok": false, "error": "no resume found"})
+                    );
+                } else {
+                    eprintln!("No resume typ found for application {}", &full_id[..8]);
+                }
             }
         }
     }
@@ -55,20 +64,36 @@ pub async fn export(
                 );
                 std::fs::write(&path, &bytes).context(error::IoSnafu)?;
                 if json {
-                    let out = serde_json::json!({ "exported": path });
-                    println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
+                    println!(
+                        "{}",
+                        serde_json::json!({"ok": true, "format": "pdf", "exported": path})
+                    );
                 } else {
                     eprintln!("Exported pdf to {path}");
                 }
             }
             None => {
-                eprintln!("No resume pdf found for application {}", &full_id[..8]);
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::json!({"ok": false, "error": "no resume found"})
+                    );
+                } else {
+                    eprintln!("No resume pdf found for application {}", &full_id[..8]);
+                }
             }
         }
     }
 
     if !typ && !pdf {
-        eprintln!("Specify --typ and/or --pdf");
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({"ok": false, "error": "specify --typ and/or --pdf"})
+            );
+        } else {
+            eprintln!("Specify --typ and/or --pdf");
+        }
     }
 
     Ok(())
@@ -88,8 +113,7 @@ pub async fn import(db: &Database, id: &str, typ_path: &str, json: bool) -> Resu
     .context(error::SqlxSnafu)?;
 
     if json {
-        let out = serde_json::json!({ "imported": full_id });
-        println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
+        println!("{}", serde_json::json!({"ok": true, "imported": full_id}));
     } else {
         eprintln!("Imported typ for application {}", &full_id[..8]);
     }

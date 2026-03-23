@@ -67,11 +67,12 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             typ,
             pdf,
             output,
+            json,
         } => {
-            cli::export::export(&db, &id, typ, pdf, output.as_deref(), false).await?;
+            cli::export::export(&db, &id, typ, pdf, output.as_deref(), json).await?;
         }
-        Command::Import { id, typ } => {
-            cli::export::import(&db, &id, &typ, false).await?;
+        Command::Import { id, typ, json } => {
+            cli::export::import(&db, &id, &typ, json).await?;
         }
         Command::Stats { json } => {
             cli::stats::stats(&db, json).await?;
@@ -326,7 +327,7 @@ fn handle_config(action: cli::ConfigAction) -> std::result::Result<(), Box<dyn s
     match action {
         cli::ConfigAction::Set { key, value } => {
             let mut cfg = app_config::load().clone();
-            set_config_field(&mut cfg, &key, &value);
+            set_config_field(&mut cfg, &key, &value)?;
             app_config::save(&cfg)?;
             eprintln!("set {key} = {value}");
             println!(
@@ -360,17 +361,24 @@ fn handle_config(action: cli::ConfigAction) -> std::result::Result<(), Box<dyn s
 }
 
 /// Set a config field by dotted key path.
-fn set_config_field(cfg: &mut app_config::AppConfig, key: &str, value: &str) {
+fn set_config_field(
+    cfg: &mut app_config::AppConfig,
+    key: &str,
+    value: &str,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     match key {
         "defaults.status" => cfg.defaults.status = value.to_string(),
         "defaults.source" => cfg.defaults.source = Some(value.to_string()),
         "display.date_format" => cfg.display.date_format = value.to_string(),
         "agent.backend" => cfg.agent.backend = value.to_string(),
         "agent.idle_timeout_secs" => {
-            cfg.agent.idle_timeout_secs = value.parse().unwrap_or(30);
+            cfg.agent.idle_timeout_secs = value
+                .parse()
+                .map_err(|_| format!("invalid integer for idle_timeout_secs: {value}"))?;
         }
-        _ => eprintln!("warning: unknown config key: {key}"),
+        _ => return Err(format!("unknown config key: {key}").into()),
     }
+    Ok(())
 }
 
 /// Get a config field by dotted key path.
