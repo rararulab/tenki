@@ -51,11 +51,11 @@ pub struct AgentConfig {
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
-            backend: "claude".to_string(),
-            command: None,
-            args: Vec::new(),
-            prompt_mode: ConfigPromptMode::Arg,
-            prompt_flag: None,
+            backend:           "claude".to_string(),
+            command:           None,
+            args:              Vec::new(),
+            prompt_mode:       ConfigPromptMode::Arg,
+            prompt_flag:       None,
             idle_timeout_secs: 30,
         }
     }
