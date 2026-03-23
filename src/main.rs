@@ -6,11 +6,12 @@ mod domain;
 mod error;
 mod extractor;
 mod paths;
+mod pipeline;
 mod store;
 
 use clap::Parser;
 use cli::{
-    AppCommand, Cli, Command, InterviewCommand, StageCommand, TaskCommand,
+    AppCommand, Cli, Command, InterviewCommand, PipelineCommand, StageCommand, TaskCommand,
     interview::{AddInterviewParams, UpdateInterviewParams},
 };
 use domain::{AddApplicationParams, ListApplicationParams, UpdateApplicationParams};
@@ -113,6 +114,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Command::Timeline { id, json } => {
             cli::stats::timeline(&db, &id, json).await?;
         }
+        Command::Pipeline(cmd) => handle_pipeline(&db, cmd).await?,
         Command::Config { action } => handle_config(action)?,
     }
 
@@ -350,6 +352,37 @@ async fn handle_stage(
         }
         StageCommand::List { app_id, json } => {
             cli::stage::list(db, &app_id, json).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch pipeline subcommands.
+async fn handle_pipeline(
+    db: &db::Database,
+    cmd: PipelineCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        PipelineCommand::Run {
+            query,
+            sources,
+            location,
+            top_n,
+            min_score,
+            skip_tailor,
+            skip_export,
+            json,
+        } => {
+            let config = pipeline::PipelineConfig::builder()
+                .query(query)
+                .sources(sources)
+                .maybe_location(location)
+                .top_n(top_n)
+                .min_score(min_score)
+                .skip_tailor(skip_tailor)
+                .skip_export(skip_export)
+                .build();
+            cli::pipeline::run(db, &config, json).await?;
         }
     }
     Ok(())

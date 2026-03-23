@@ -3,6 +3,7 @@ pub mod app;
 pub mod discover;
 pub mod export;
 pub mod interview;
+pub mod pipeline;
 pub mod stage;
 pub mod stats;
 pub mod tailor;
@@ -139,10 +140,46 @@ pub enum Command {
         json: bool,
     },
 
+    /// Run the automation pipeline (discover -> score -> tailor -> export)
+    #[command(subcommand)]
+    Pipeline(PipelineCommand),
+
     /// Manage configuration values
     Config {
         #[command(subcommand)]
         action: ConfigAction,
+    },
+}
+
+/// Pipeline subcommands.
+#[derive(Subcommand)]
+pub enum PipelineCommand {
+    /// Run the full automation pipeline
+    Run {
+        /// Search query
+        #[arg(long)]
+        query:       String,
+        /// Source platforms (comma-separated: boss,linkedin)
+        #[arg(long, value_delimiter = ',')]
+        sources:     Vec<String>,
+        /// Location filter
+        #[arg(long)]
+        location:    Option<String>,
+        /// Keep top N after scoring (default: 10)
+        #[arg(long, default_value_t = 10)]
+        top_n:       u32,
+        /// Minimum fitness score (default: 50)
+        #[arg(long, default_value_t = 50.0)]
+        min_score:   f64,
+        /// Skip tailoring step
+        #[arg(long)]
+        skip_tailor: bool,
+        /// Skip export step
+        #[arg(long)]
+        skip_export: bool,
+        /// Output as JSON
+        #[arg(long)]
+        json:        bool,
     },
 }
 
