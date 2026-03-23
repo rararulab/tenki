@@ -18,7 +18,10 @@ pub fn data_dir() -> &'static Path {
         env::var("TENKI_DATA_DIR").map_or_else(
             |_| {
                 dirs::home_dir()
-                    .expect("home directory must be resolvable")
+                    .unwrap_or_else(|| {
+                        eprintln!("fatal: unable to determine home directory");
+                        std::process::exit(1);
+                    })
                     .join(".tenki")
             },
             PathBuf::from,

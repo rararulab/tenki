@@ -148,7 +148,11 @@ impl Database {
             0 => Err(TenkiError::ApplicationNotFound {
                 id: prefix.to_string(),
             }),
-            1 => Ok(rows.into_iter().next().expect("checked len").0),
+            1 => rows.into_iter().next().map(|r| r.0).ok_or_else(|| {
+                TenkiError::ApplicationNotFound {
+                    id: prefix.to_string(),
+                }
+            }),
             _ => Err(TenkiError::AmbiguousId {
                 prefix: prefix.to_string(),
             }),
@@ -168,7 +172,14 @@ impl Database {
             0 => Err(TenkiError::InterviewNotFound {
                 id: prefix.to_string(),
             }),
-            1 => Ok(rows.into_iter().next().expect("checked len").0),
+            1 => {
+                rows.into_iter()
+                    .next()
+                    .map(|r| r.0)
+                    .ok_or_else(|| TenkiError::InterviewNotFound {
+                        id: prefix.to_string(),
+                    })
+            }
             _ => Err(TenkiError::AmbiguousId {
                 prefix: prefix.to_string(),
             }),
@@ -188,7 +199,13 @@ impl Database {
             0 => Err(TenkiError::TaskNotFound {
                 id: prefix.to_string(),
             }),
-            1 => Ok(rows.into_iter().next().expect("checked len").0),
+            1 => rows
+                .into_iter()
+                .next()
+                .map(|r| r.0)
+                .ok_or_else(|| TenkiError::TaskNotFound {
+                    id: prefix.to_string(),
+                }),
             _ => Err(TenkiError::AmbiguousId {
                 prefix: prefix.to_string(),
             }),
