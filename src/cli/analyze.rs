@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 
 use crate::{
     agent::{CliBackend, CliExecutor},
@@ -83,12 +84,15 @@ pub async fn run(
         id: id.to_string(),
         score,
         method,
-        breakdown: serde_json::to_value(&breakdown).unwrap_or_default(),
+        breakdown: serde_json::to_value(&breakdown).context(crate::error::JsonSnafu)?,
         notes,
     };
 
     if json {
-        println!("{}", serde_json::to_string(&result).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string(&result).context(crate::error::JsonSnafu)?
+        );
     } else {
         eprintln!("Fitness score: {score:.0}/100 (method: {})", result.method);
         eprintln!("Notes: {}", result.notes);

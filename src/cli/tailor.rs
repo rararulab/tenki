@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
 
 use crate::{
     agent::{CliBackend, CliExecutor},
@@ -88,7 +89,10 @@ pub async fn run(
     };
 
     if json {
-        println!("{}", serde_json::to_string(&result).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string(&result).context(crate::error::JsonSnafu)?
+        );
     } else {
         eprintln!("Tailored resume content (method: {}):", result.method);
         eprintln!("  Headline: {}", result.headline);
