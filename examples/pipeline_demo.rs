@@ -4,6 +4,7 @@
 //! - Synthetic 3-year Python candidate profile
 //! - Target Tokyo LLM/AI roles from `LinkedIn`
 //! - Stop after tailor (before export/apply)
+//! - Resume template from `examples/fake_resume_repo` (Typst + Makefile)
 //!
 //! Run:
 //! `cargo run --example pipeline_demo`
@@ -16,7 +17,7 @@
 //! - `KEEP_TMP=1` to keep temp dirs for inspection
 
 use std::{
-    env, fmt,
+    env, fmt, fs,
     path::{Path, PathBuf},
     process::{Command, Output},
 };
@@ -43,6 +44,23 @@ impl fmt::Display for CmdError {
 }
 
 impl std::error::Error for CmdError {}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        let file_type = entry.file_type()?;
+
+        if file_type.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else if file_type.is_file() {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
 
 fn ensure_command_exists(command: &str, probe_arg: &str) -> Result<(), Box<dyn std::error::Error>> {
     match Command::new(command).arg(probe_arg).output() {
@@ -97,11 +115,26 @@ fn run_git(repo: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>>
     }
 }
 
+fn run_make_pdf(repo: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new("make").arg("pdf").current_dir(repo).output()?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "make pdf failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .into())
+    }
+}
+
 #[allow(clippy::too_many_lines)] // Example script-style flow is intentionally linear and verbose.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ensure_command_exists("tenki", "--help")?;
     ensure_command_exists("opencli", "--help")?;
     ensure_command_exists("git", "--version")?;
+    ensure_command_exists("make", "--version")?;
+    ensure_command_exists("typst", "--version")?;
 
     let query = env::var("QUERY").unwrap_or_else(|_| "python llm ai".to_string());
     let location = env::var("LOCATION").unwrap_or_else(|_| "Tokyo".to_string());
@@ -112,31 +145,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data_tmp = tempfile::tempdir()?;
     let resume_tmp = tempfile::tempdir()?;
     let data_dir = data_tmp.path().to_path_buf();
-    let resume_repo = resume_tmp.path().to_path_buf();
+    let resume_template =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/fake_resume_repo");
+    let resume_repo = resume_tmp.path().join("fake-resume-repo");
 
     println!("=== tenki pre-application example ===");
     println!("query={query} | location={location} | source={source} | top_n={top_n}");
     println!("TENKI_DATA_DIR={}", data_dir.display());
     println!();
 
-    println!("--- Step 1: Create fake resume repo (3-year Python profile) ---");
-    std::fs::write(
-        resume_repo.join("resume.typ"),
-        r"= Alex Chen
-Python Engineer (3 years)
-
-- 3 years backend development in Python/FastAPI
-- Built internal GenAI assistant with RAG and embeddings
-- Productionized LLM APIs with monitoring and eval
-",
-    )?;
+    println!("--- Step 1: Create fake resume repo (Typst + Makefile + real PDF) ---");
+    if !resume_template.exists() {
+        return Err(format!(
+            "resume template folder missing: {}",
+            resume_template.display()
+        )
+        .into());
+    }
+    copy_dir_recursive(&resume_template, &resume_repo)?;
     run_git(&resume_repo, &["init", "-q"])?;
-    run_git(&resume_repo, &["add", "resume.typ"])?;
+    run_git(&resume_repo, &["config", "user.name", "Tenki Example"])?;
     run_git(
         &resume_repo,
-        &["commit", "-q", "-m", "init synthetic resume profile"],
+        &["config", "user.email", "tenki-example@example.local"],
     )?;
+    run_git(&resume_repo, &["add", "."])?;
+    run_git(
+        &resume_repo,
+        &["commit", "-q", "-m", "init fake resume repo template"],
+    )?;
+    run_make_pdf(&resume_repo)?;
+    let pdf_path = resume_repo.join("build/resume.pdf");
+    if !pdf_path.is_file() {
+        return Err(format!("expected rendered PDF missing: {}", pdf_path.display()).into());
+    }
     println!("resume_repo={}", resume_repo.display());
+    println!("rendered_pdf={}", pdf_path.display());
     println!();
 
     println!("--- Step 2: Initialize tenki + configure preferences ---");
@@ -333,10 +377,11 @@ Python Engineer (3 years)
 
     if keep_tmp {
         let kept_data: PathBuf = data_tmp.keep();
-        let kept_resume: PathBuf = resume_tmp.keep();
+        let kept_resume_root: PathBuf = resume_tmp.keep();
+        let kept_resume_repo = kept_resume_root.join("fake-resume-repo");
         println!("KEEP_TMP=1; temp dirs kept:");
         println!("  TENKI_DATA_DIR={}", kept_data.display());
-        println!("  RESUME_REPO={}", kept_resume.display());
+        println!("  RESUME_REPO={}", kept_resume_repo.display());
     }
 
     Ok(())

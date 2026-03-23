@@ -55,6 +55,10 @@ tenki can automatically discover jobs, score fitness, tailor resumes, and genera
 # Install opencli for job discovery
 cargo install opencli
 
+# Install Typst for resume PDF rendering
+# macOS: brew install typst
+# other platforms: https://typst.app/docs/reference/cli/
+
 # Configure agent backend (for scoring/tailoring)
 tenki config set agent.backend claude
 ```
@@ -115,6 +119,7 @@ Pipeline steps:
 
 Goal: a synthetic 3-year Python candidate targeting Tokyo LLM/AI roles.
 This walkthrough stops after tailoring (pre-application review).
+The resume repo template lives at `examples/fake_resume_repo/` (Typst + Makefile).
 
 Runnable Rust example (recommended):
 
@@ -127,20 +132,24 @@ QUERY="python llm ai" LOCATION="Tokyo" cargo run --example pipeline_demo
 Equivalent step-by-step commands:
 
 ```bash
-# 1) Configure resume repo (kept for later export/apply phase)
-tenki config set resume.repo_path ~/code/fake-resume
+# 1) Prepare fake resume repo and render a real PDF once
+cp -R examples/fake_resume_repo ~/code/fake-resume-repo
+(cd ~/code/fake-resume-repo && make pdf)
+
+# 2) Configure resume repo (kept for later export/apply phase)
+tenki config set resume.repo_path ~/code/fake-resume-repo
 tenki config set resume.build_command "make pdf"
 tenki config set resume.output_path build/resume.pdf
 
-# 2) Set job preferences
+# 3) Set job preferences
 tenki config set preferences.query "python llm ai"
 tenki config set preferences.location "Tokyo"
 tenki config set preferences.sources "linkedin"
 
-# 3) Discover jobs from LinkedIn
+# 4) Discover jobs from LinkedIn
 tenki discover --source linkedin --query "python llm ai" --location "Tokyo"
 
-# 4) Inject synthetic candidate profile (3-year Python resume) into discovered apps
+# 5) Inject synthetic candidate profile (3-year Python resume) into discovered apps
 for id in $(tenki app list --status discovered --json | jq -r '.[].id'); do
   short=${id:0:8}
   tenki app update "$short" \
@@ -148,11 +157,11 @@ for id in $(tenki app list --status discovered --json | jq -r '.[].id'); do
     --notes "Synthetic profile: 3 years Python engineer targeting Tokyo LLM/AI roles"
 done
 
-# 5) Score + tailor (stop here, before export/apply)
+# 6) Score + tailor (stop here, before export/apply)
 tenki analyze --unscored --top-n 10
 tenki tailor --untailored --top-n 10
 
-# 6) Pre-application review
+# 7) Pre-application review
 tenki app list --json | jq '[.[] | {id: .id[0:8], company, position, score: .fitness_score, tailored_summary}]'
 ```
 
