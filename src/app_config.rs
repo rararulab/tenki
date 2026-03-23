@@ -61,8 +61,17 @@ pub fn load() -> &'static AppConfig {
             let settings = config::Config::builder()
                 .add_source(config::File::from(path.as_ref()))
                 .build()
-                .unwrap_or_default();
-            settings.try_deserialize().unwrap_or_default()
+                .unwrap_or_else(|e| {
+                    tracing::warn!(
+                        "failed to load config from {}: {e}, using defaults",
+                        path.display()
+                    );
+                    config::Config::default()
+                });
+            settings.try_deserialize().unwrap_or_else(|e| {
+                tracing::warn!("failed to parse config: {e}, using defaults");
+                AppConfig::default()
+            })
         } else {
             AppConfig::default()
         }
