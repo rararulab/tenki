@@ -23,6 +23,13 @@ use std::{
 };
 
 use serde_json::Value;
+use tempfile::TempDir;
+
+type DynResult<T> = Result<T, Box<dyn std::error::Error>>;
+
+const SYNTHETIC_SKILLS: &str = "Python,FastAPI,LLM,RAG,Prompt Engineering,Vector Database,Docker";
+const SYNTHETIC_NOTE: &str =
+    "Synthetic profile: 3 years Python engineer targeting Tokyo LLM/AI roles";
 
 #[derive(Debug)]
 struct CmdError {
@@ -45,7 +52,25 @@ impl fmt::Display for CmdError {
 
 impl std::error::Error for CmdError {}
 
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug, Clone)]
+struct DemoOptions {
+    query:    String,
+    location: String,
+    source:   String,
+    top_n:    String,
+    keep_tmp: bool,
+}
+
+#[derive(Debug)]
+struct DemoRuntime {
+    data_tmp:        TempDir,
+    resume_tmp:      TempDir,
+    data_dir:        PathBuf,
+    resume_template: PathBuf,
+    resume_repo:     PathBuf,
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> DynResult<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
@@ -62,7 +87,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-fn ensure_command_exists(command: &str, probe_arg: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn ensure_command_exists(command: &str, probe_arg: &str) -> DynResult<()> {
     match Command::new(command).arg(probe_arg).output() {
         Ok(_) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -72,7 +97,20 @@ fn ensure_command_exists(command: &str, probe_arg: &str) -> Result<(), Box<dyn s
     }
 }
 
-fn run_tenki(data_dir: &Path, args: &[String]) -> Result<Output, Box<dyn std::error::Error>> {
+fn ensure_prerequisites() -> DynResult<()> {
+    for (cmd, arg) in [
+        ("tenki", "--help"),
+        ("opencli", "--help"),
+        ("git", "--version"),
+        ("make", "--version"),
+        ("typst", "--version"),
+    ] {
+        ensure_command_exists(cmd, arg)?;
+    }
+    Ok(())
+}
+
+fn run_tenki(data_dir: &Path, args: &[&str]) -> DynResult<Output> {
     let output = Command::new("tenki")
         .args(args)
         .env("TENKI_DATA_DIR", data_dir)
@@ -80,28 +118,25 @@ fn run_tenki(data_dir: &Path, args: &[String]) -> Result<Output, Box<dyn std::er
     Ok(output)
 }
 
-fn run_tenki_checked(
-    data_dir: &Path,
-    args: &[String],
-) -> Result<String, Box<dyn std::error::Error>> {
+fn run_tenki_checked(data_dir: &Path, args: &[&str]) -> DynResult<String> {
     let output = run_tenki(data_dir, args)?;
     if output.status.success() {
         Ok(String::from_utf8(output.stdout)?)
     } else {
         Err(Box::new(CmdError {
-            args:   args.to_vec(),
+            args:   args.iter().map(|s| s.to_string()).collect(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
             stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         }))
     }
 }
 
-fn run_tenki_json(data_dir: &Path, args: &[String]) -> Result<Value, Box<dyn std::error::Error>> {
+fn run_tenki_json(data_dir: &Path, args: &[&str]) -> DynResult<Value> {
     let stdout = run_tenki_checked(data_dir, args)?;
     Ok(serde_json::from_str(&stdout)?)
 }
 
-fn run_git(repo: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+fn run_git(repo: &Path, args: &[&str]) -> DynResult<()> {
     let output = Command::new("git").args(args).current_dir(repo).output()?;
     if output.status.success() {
         Ok(())
@@ -115,7 +150,7 @@ fn run_git(repo: &Path, args: &[&str]) -> Result<(), Box<dyn std::error::Error>>
     }
 }
 
-fn run_make_pdf(repo: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn run_make_pdf(repo: &Path) -> DynResult<()> {
     let output = Command::new("make").arg("pdf").current_dir(repo).output()?;
     if output.status.success() {
         Ok(())
@@ -128,20 +163,17 @@ fn run_make_pdf(repo: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-#[allow(clippy::too_many_lines)] // Example script-style flow is intentionally linear and verbose.
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ensure_command_exists("tenki", "--help")?;
-    ensure_command_exists("opencli", "--help")?;
-    ensure_command_exists("git", "--version")?;
-    ensure_command_exists("make", "--version")?;
-    ensure_command_exists("typst", "--version")?;
+fn load_options() -> DemoOptions {
+    DemoOptions {
+        query:    env::var("QUERY").unwrap_or_else(|_| "python llm ai".to_string()),
+        location: env::var("LOCATION").unwrap_or_else(|_| "Tokyo".to_string()),
+        source:   env::var("SOURCE").unwrap_or_else(|_| "linkedin".to_string()),
+        top_n:    env::var("TOP_N").unwrap_or_else(|_| "10".to_string()),
+        keep_tmp: env::var("KEEP_TMP").map(|v| v == "1").unwrap_or(false),
+    }
+}
 
-    let query = env::var("QUERY").unwrap_or_else(|_| "python llm ai".to_string());
-    let location = env::var("LOCATION").unwrap_or_else(|_| "Tokyo".to_string());
-    let source = env::var("SOURCE").unwrap_or_else(|_| "linkedin".to_string());
-    let top_n = env::var("TOP_N").unwrap_or_else(|_| "10".to_string());
-    let keep_tmp = env::var("KEEP_TMP").map(|v| v == "1").unwrap_or(false);
-
+fn init_runtime() -> DynResult<DemoRuntime> {
     let data_tmp = tempfile::tempdir()?;
     let resume_tmp = tempfile::tempdir()?;
     let data_dir = data_tmp.path().to_path_buf();
@@ -149,136 +181,114 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/fake_resume_repo");
     let resume_repo = resume_tmp.path().join("fake-resume-repo");
 
-    println!("=== tenki pre-application example ===");
-    println!("query={query} | location={location} | source={source} | top_n={top_n}");
-    println!("TENKI_DATA_DIR={}", data_dir.display());
-    println!();
+    Ok(DemoRuntime {
+        data_tmp,
+        resume_tmp,
+        data_dir,
+        resume_template,
+        resume_repo,
+    })
+}
 
+fn print_banner(options: &DemoOptions, runtime: &DemoRuntime) {
+    println!("=== tenki pre-application example ===");
+    println!(
+        "query={} | location={} | source={} | top_n={}",
+        options.query, options.location, options.source, options.top_n
+    );
+    println!("TENKI_DATA_DIR={}", runtime.data_dir.display());
+    println!();
+}
+
+fn create_fake_resume_repo(runtime: &DemoRuntime) -> DynResult<()> {
     println!("--- Step 1: Create fake resume repo (Typst + Makefile + real PDF) ---");
-    if !resume_template.exists() {
+    if !runtime.resume_template.exists() {
         return Err(format!(
             "resume template folder missing: {}",
-            resume_template.display()
+            runtime.resume_template.display()
         )
         .into());
     }
-    copy_dir_recursive(&resume_template, &resume_repo)?;
-    run_git(&resume_repo, &["init", "-q"])?;
-    run_git(&resume_repo, &["config", "user.name", "Tenki Example"])?;
+
+    copy_dir_recursive(&runtime.resume_template, &runtime.resume_repo)?;
+    run_git(&runtime.resume_repo, &["init", "-q"])?;
     run_git(
-        &resume_repo,
+        &runtime.resume_repo,
+        &["config", "user.name", "Tenki Example"],
+    )?;
+    run_git(
+        &runtime.resume_repo,
         &["config", "user.email", "tenki-example@example.local"],
     )?;
-    run_git(&resume_repo, &["add", "."])?;
+    run_git(&runtime.resume_repo, &["add", "."])?;
     run_git(
-        &resume_repo,
+        &runtime.resume_repo,
         &["commit", "-q", "-m", "init fake resume repo template"],
     )?;
-    run_make_pdf(&resume_repo)?;
-    let pdf_path = resume_repo.join("build/resume.pdf");
+
+    run_make_pdf(&runtime.resume_repo)?;
+    let pdf_path = runtime.resume_repo.join("build/resume.pdf");
     if !pdf_path.is_file() {
         return Err(format!("expected rendered PDF missing: {}", pdf_path.display()).into());
     }
-    println!("resume_repo={}", resume_repo.display());
+
+    println!("resume_repo={}", runtime.resume_repo.display());
     println!("rendered_pdf={}", pdf_path.display());
     println!();
+    Ok(())
+}
 
+fn set_tenki_config(data_dir: &Path, key: &str, value: &str) -> DynResult<()> {
+    run_tenki_checked(data_dir, &["config", "set", key, value])?;
+    Ok(())
+}
+
+fn init_tenki_and_preferences(runtime: &DemoRuntime, options: &DemoOptions) -> DynResult<()> {
     println!("--- Step 2: Initialize tenki + configure preferences ---");
-    run_tenki_checked(&data_dir, &[String::from("init")])?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("resume.repo_path"),
-            resume_repo.to_string_lossy().to_string(),
-        ],
+    run_tenki_checked(&runtime.data_dir, &["init"])?;
+    set_tenki_config(
+        &runtime.data_dir,
+        "resume.repo_path",
+        &runtime.resume_repo.to_string_lossy(),
     )?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("resume.build_command"),
-            String::from("make pdf"),
-        ],
-    )?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("resume.output_path"),
-            String::from("build/resume.pdf"),
-        ],
-    )?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("preferences.query"),
-            query.clone(),
-        ],
-    )?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("preferences.location"),
-            location.clone(),
-        ],
-    )?;
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("preferences.sources"),
-            source.clone(),
-        ],
-    )?;
+    set_tenki_config(&runtime.data_dir, "resume.build_command", "make pdf")?;
+    set_tenki_config(&runtime.data_dir, "resume.output_path", "build/resume.pdf")?;
+    set_tenki_config(&runtime.data_dir, "preferences.query", &options.query)?;
+    set_tenki_config(&runtime.data_dir, "preferences.location", &options.location)?;
+    set_tenki_config(&runtime.data_dir, "preferences.sources", &options.source)?;
+
     // Force analyze/tailor keyword fallback so this example doesn't require an
     // agent CLI.
-    run_tenki_checked(
-        &data_dir,
-        &[
-            String::from("config"),
-            String::from("set"),
-            String::from("agent.backend"),
-            String::from("not-a-real-backend"),
-        ],
-    )?;
+    set_tenki_config(&runtime.data_dir, "agent.backend", "not-a-real-backend")?;
     println!();
+    Ok(())
+}
 
+fn discover_jobs(runtime: &DemoRuntime, options: &DemoOptions) -> DynResult<()> {
     println!("--- Step 3: Discover real jobs via opencli ---");
     let discover = run_tenki_json(
-        &data_dir,
+        &runtime.data_dir,
         &[
-            String::from("discover"),
-            String::from("--source"),
-            source,
-            String::from("--query"),
-            query,
-            String::from("--location"),
-            location,
-            String::from("--json"),
+            "discover",
+            "--source",
+            &options.source,
+            "--query",
+            &options.query,
+            "--location",
+            &options.location,
+            "--json",
         ],
     )?;
     println!("{discover}");
     println!();
+    Ok(())
+}
 
+fn inject_synthetic_profile(runtime: &DemoRuntime) -> DynResult<()> {
     println!("--- Step 4: Inject synthetic profile into discovered jobs ---");
     let discovered_apps = run_tenki_json(
-        &data_dir,
-        &[
-            String::from("app"),
-            String::from("list"),
-            String::from("--status"),
-            String::from("discovered"),
-            String::from("--json"),
-        ],
+        &runtime.data_dir,
+        &["app", "list", "--status", "discovered", "--json"],
     )?;
     let apps = discovered_apps
         .as_array()
@@ -293,64 +303,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .and_then(Value::as_str)
             .ok_or("application missing id")?;
         let short_id = &full_id[..8];
+
         run_tenki_checked(
-            &data_dir,
+            &runtime.data_dir,
             &[
-                String::from("app"),
-                String::from("update"),
-                short_id.to_string(),
-                String::from("--skills"),
-                String::from("Python,FastAPI,LLM,RAG,Prompt Engineering,Vector Database,Docker"),
-                String::from("--notes"),
-                String::from(
-                    "Synthetic profile: 3 years Python engineer targeting Tokyo LLM/AI roles",
-                ),
-                String::from("--status"),
-                String::from("bookmarked"),
-                String::from("--json"),
+                "app",
+                "update",
+                short_id,
+                "--skills",
+                SYNTHETIC_SKILLS,
+                "--notes",
+                SYNTHETIC_NOTE,
+                "--status",
+                "bookmarked",
+                "--json",
             ],
         )?;
         println!("profile injected: {short_id}");
     }
     println!();
+    Ok(())
+}
 
+fn score_and_tailor(runtime: &DemoRuntime, options: &DemoOptions) -> DynResult<()> {
     println!("--- Step 5: Score + tailor (stop before export/apply) ---");
     let analyze = run_tenki_json(
-        &data_dir,
-        &[
-            String::from("analyze"),
-            String::from("--unscored"),
-            String::from("--top-n"),
-            top_n.clone(),
-            String::from("--json"),
-        ],
+        &runtime.data_dir,
+        &["analyze", "--unscored", "--top-n", &options.top_n, "--json"],
     )?;
     let tailor = run_tenki_json(
-        &data_dir,
+        &runtime.data_dir,
         &[
-            String::from("tailor"),
-            String::from("--untailored"),
-            String::from("--top-n"),
-            top_n,
-            String::from("--json"),
+            "tailor",
+            "--untailored",
+            "--top-n",
+            &options.top_n,
+            "--json",
         ],
     )?;
     println!("analyze: {analyze}");
     println!("tailor:  {tailor}");
     println!();
+    Ok(())
+}
 
+fn print_preapply_snapshot(runtime: &DemoRuntime) -> DynResult<()> {
     println!("--- Step 6: Pre-application review snapshot ---");
-    let final_apps = run_tenki_json(
-        &data_dir,
-        &[
-            String::from("app"),
-            String::from("list"),
-            String::from("--json"),
-        ],
-    )?;
+    let final_apps = run_tenki_json(&runtime.data_dir, &["app", "list", "--json"])?;
     let final_apps = final_apps
         .as_array()
         .ok_or("unexpected JSON format from final app list")?;
+
     for app in final_apps {
         let id = app.get("id").and_then(Value::as_str).unwrap_or("");
         let company = app.get("company").and_then(Value::as_str).unwrap_or("");
@@ -363,6 +366,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .get("tailored_summary")
             .and_then(Value::as_str)
             .is_some();
+
         println!(
             "{} | {} | {} | score={} | tailored={}",
             &id[..id.len().min(8)],
@@ -372,17 +376,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             tailored
         );
     }
+
     println!();
     println!("Done: flow stops here (pre-application). No export/apply executed.");
+    Ok(())
+}
 
+fn finalize(runtime: DemoRuntime, keep_tmp: bool) {
     if keep_tmp {
-        let kept_data: PathBuf = data_tmp.keep();
-        let kept_resume_root: PathBuf = resume_tmp.keep();
+        let kept_data = runtime.data_tmp.keep();
+        let kept_resume_root = runtime.resume_tmp.keep();
         let kept_resume_repo = kept_resume_root.join("fake-resume-repo");
         println!("KEEP_TMP=1; temp dirs kept:");
         println!("  TENKI_DATA_DIR={}", kept_data.display());
         println!("  RESUME_REPO={}", kept_resume_repo.display());
     }
+}
+
+fn main() -> DynResult<()> {
+    ensure_prerequisites()?;
+
+    let options = load_options();
+    let runtime = init_runtime()?;
+
+    print_banner(&options, &runtime);
+    create_fake_resume_repo(&runtime)?;
+    init_tenki_and_preferences(&runtime, &options)?;
+    discover_jobs(&runtime, &options)?;
+    inject_synthetic_profile(&runtime)?;
+    score_and_tailor(&runtime, &options)?;
+    print_preapply_snapshot(&runtime)?;
+    finalize(runtime, options.keep_tmp);
 
     Ok(())
 }
