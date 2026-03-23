@@ -9,8 +9,6 @@ use std::io::Write;
 use snafu::Snafu;
 use tempfile::NamedTempFile;
 
-use super::config::AgentConfig;
-
 /// Module-level result type.
 pub type Result<T> = std::result::Result<T, BackendError>;
 
@@ -40,10 +38,6 @@ pub enum OutputFormat {
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]
 pub enum BackendError {
-    /// Custom backend requires a command to be specified.
-    #[snafu(display("custom backend requires a command to be specified"))]
-    CustomBackendRequiresCommand,
-
     /// Unknown backend name.
     #[snafu(display("unknown backend: {name}"))]
     UnknownBackend {
@@ -94,44 +88,15 @@ pub struct CliBackend {
     pub prompt_mode:   PromptMode,
     /// Argument flag for prompt (if `prompt_mode` is `Arg`).
     pub prompt_flag:   Option<String>,
-    /// Output format emitted by this backend.
+    /// Output format emitted by this backend (used by downstream stream
+    /// parsers to select the correct decoder).
     #[allow(dead_code)]
     pub output_format: OutputFormat,
     /// Environment variables to set when spawning the process.
     pub env_vars:      Vec<(String, String)>,
 }
 
-#[allow(dead_code)]
 impl CliBackend {
-    /// Creates a backend from an [`AgentConfig`].
-    ///
-    /// Delegates to [`Self::from_name`] for named backends and applies
-    /// config overrides (extra args, command path).
-    ///
-    /// # Errors
-    /// Returns [`BackendError`] if the backend is "custom" but no command is
-    /// specified, or if the backend name is unrecognized.
-    pub fn from_agent_config(config: &AgentConfig) -> Result<Self> {
-        if config.backend == "custom" {
-            return Self::custom(config);
-        }
-
-        let mut backend = Self::from_name(&config.backend)?;
-
-        // Apply configured extra args for named backends too.
-        backend.args.extend(config.args.iter().cloned());
-        if backend.command == "codex" {
-            Self::reconcile_codex_args(&mut backend.args);
-        }
-
-        // Honor command override for named backends (e.g., custom binary path)
-        if let Some(ref cmd) = config.command {
-            backend.command.clone_from(cmd);
-        }
-
-        Ok(backend)
-    }
-
     /// Creates the Claude backend.
     ///
     /// Uses `-p` flag for headless/print mode execution. This runs Claude
@@ -140,7 +105,7 @@ impl CliBackend {
     /// Emits `--output-format stream-json` for NDJSON streaming output.
     /// Note: `--verbose` is required when using `--output-format stream-json`
     /// with `-p`.
-    pub fn claude() -> Self {
+    fn claude() -> Self {
         Self {
             command:       "claude".to_string(),
             args:          vec![
@@ -156,42 +121,10 @@ impl CliBackend {
         }
     }
 
-    /// Creates the Claude backend for interactive prompt injection.
-    ///
-    /// Runs Claude without `-p` flag, passing prompt as a positional argument.
-    pub fn claude_interactive() -> Self {
-        Self {
-            command:       "claude".to_string(),
-            args:          vec!["--dangerously-skip-permissions".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
-    /// Creates the Claude interactive backend with Agent Teams support.
-    ///
-    /// Like `claude_interactive()` but with
-    /// `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var.
-    pub fn claude_interactive_teams() -> Self {
-        Self {
-            command:       "claude".to_string(),
-            args:          vec!["--dangerously-skip-permissions".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![(
-                "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS".to_string(),
-                "1".to_string(),
-            )],
-        }
-    }
-
     /// Creates the Kiro backend.
     ///
     /// Uses `kiro-cli` in headless mode with all tools trusted.
-    pub fn kiro() -> Self {
+    fn kiro() -> Self {
         Self {
             command:       "kiro-cli".to_string(),
             args:          vec![
@@ -204,59 +137,25 @@ impl CliBackend {
             output_format: OutputFormat::Text,
             env_vars:      vec![],
         }
-    }
-
-    /// Creates the Kiro backend with a specific agent and optional extra args.
-    ///
-    /// Uses `kiro-cli` with `--agent` flag to select a specific agent.
-    pub fn kiro_with_agent(agent: String, extra_args: &[String]) -> Self {
-        let mut backend = Self {
-            command:       "kiro-cli".to_string(),
-            args:          vec![
-                "chat".to_string(),
-                "--no-interactive".to_string(),
-                "--trust-all-tools".to_string(),
-                "--agent".to_string(),
-                agent,
-            ],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        };
-        backend.args.extend(extra_args.iter().cloned());
-        backend
     }
 
     /// Creates the Kiro ACP backend.
     ///
     /// Uses `kiro-cli` with the ACP subcommand for structured JSON-RPC
     /// communication over stdio instead of PTY text scraping.
-    pub fn kiro_acp() -> Self { Self::kiro_acp_with_options(None, None) }
-
-    /// Creates the Kiro ACP backend with an optional agent and/or model.
-    pub fn kiro_acp_with_options(agent: Option<&str>, model: Option<&str>) -> Self {
-        let mut args = vec!["acp".to_string()];
-        if let Some(name) = agent {
-            args.push("--agent".to_string());
-            args.push(name.to_string());
-        }
-        if let Some(m) = model {
-            args.push("--model".to_string());
-            args.push(m.to_string());
-        }
+    fn kiro_acp() -> Self {
         Self {
-            command: "kiro-cli".to_string(),
-            args,
-            prompt_mode: PromptMode::Stdin,
-            prompt_flag: None,
+            command:       "kiro-cli".to_string(),
+            args:          vec!["acp".to_string()],
+            prompt_mode:   PromptMode::Stdin,
+            prompt_flag:   None,
             output_format: OutputFormat::Acp,
-            env_vars: vec![],
+            env_vars:      vec![],
         }
     }
 
     /// Creates the Gemini backend.
-    pub fn gemini() -> Self {
+    fn gemini() -> Self {
         Self {
             command:       "gemini".to_string(),
             args:          vec!["--yolo".to_string()],
@@ -267,24 +166,8 @@ impl CliBackend {
         }
     }
 
-    /// Gemini in interactive mode with initial prompt (uses `-i`, not `-p`).
-    ///
-    /// **Critical quirk**: Gemini requires `-i` flag for interactive+prompt
-    /// mode. Using `-p` would make it run headless and exit after one
-    /// response.
-    pub fn gemini_interactive() -> Self {
-        Self {
-            command:       "gemini".to_string(),
-            args:          vec!["--yolo".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   Some("-i".to_string()),
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
     /// Creates the Codex backend.
-    pub fn codex() -> Self {
+    fn codex() -> Self {
         Self {
             command:       "codex".to_string(),
             args:          vec!["exec".to_string(), "--yolo".to_string()],
@@ -295,41 +178,11 @@ impl CliBackend {
         }
     }
 
-    /// Codex in interactive TUI mode (no `exec` subcommand).
-    ///
-    /// Unlike headless `codex()`, this runs without `exec` and `--full-auto`
-    /// flags, allowing interactive TUI mode.
-    pub fn codex_interactive() -> Self {
-        Self {
-            command:       "codex".to_string(),
-            args:          vec![],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
     /// Creates the Amp backend.
-    pub fn amp() -> Self {
+    fn amp() -> Self {
         Self {
             command:       "amp".to_string(),
             args:          vec!["--dangerously-allow-all".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   Some("-x".to_string()),
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
-    /// Amp in interactive mode (removes `--dangerously-allow-all`).
-    ///
-    /// Unlike headless `amp()`, this runs without the auto-approve flag,
-    /// requiring user confirmation for tool usage.
-    pub fn amp_interactive() -> Self {
-        Self {
-            command:       "amp".to_string(),
-            args:          vec![],
             prompt_mode:   PromptMode::Arg,
             prompt_flag:   Some("-x".to_string()),
             output_format: OutputFormat::Text,
@@ -341,7 +194,7 @@ impl CliBackend {
     ///
     /// Uses GitHub Copilot CLI with `--allow-all-tools` for automated tool
     /// approval.
-    pub fn copilot() -> Self {
+    fn copilot() -> Self {
         Self {
             command:       "copilot".to_string(),
             args:          vec!["--allow-all-tools".to_string()],
@@ -352,41 +205,11 @@ impl CliBackend {
         }
     }
 
-    /// Copilot in interactive mode (removes `--allow-all-tools`).
-    ///
-    /// Unlike headless `copilot()`, this runs without the auto-approve flag,
-    /// requiring user confirmation for tool usage.
-    pub fn copilot_interactive() -> Self {
-        Self {
-            command:       "copilot".to_string(),
-            args:          vec![],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   Some("-p".to_string()),
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
-    /// Creates the Copilot TUI backend for interactive mode.
-    ///
-    /// Runs Copilot in full interactive mode (no `-p` flag), allowing
-    /// Copilot's native TUI to render.
-    pub fn copilot_tui() -> Self {
-        Self {
-            command:       "copilot".to_string(),
-            args:          vec![],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
     /// Creates the `OpenCode` backend for autonomous/headless mode.
     ///
     /// Uses `OpenCode` CLI with `run` subcommand. The prompt is passed as a
     /// positional argument after the subcommand.
-    pub fn opencode() -> Self {
+    fn opencode() -> Self {
         Self {
             command:       "opencode".to_string(),
             args:          vec!["run".to_string()],
@@ -397,27 +220,11 @@ impl CliBackend {
         }
     }
 
-    /// `OpenCode` in interactive TUI mode.
-    ///
-    /// Runs `OpenCode` TUI with an initial prompt via `--prompt` flag.
-    /// Unlike `opencode()` which uses `opencode run` (headless mode),
-    /// this launches the interactive TUI and injects the prompt.
-    pub fn opencode_interactive() -> Self {
-        Self {
-            command:       "opencode".to_string(),
-            args:          vec![],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   Some("--prompt".to_string()),
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
     /// Creates the Pi backend for headless execution.
     ///
     /// Uses `-p` for print mode with `--mode json` for NDJSON streaming output.
     /// Emits `PiStreamJson` output format for structured event parsing.
-    pub fn pi() -> Self {
+    fn pi() -> Self {
         Self {
             command:       "pi".to_string(),
             args:          vec![
@@ -433,27 +240,12 @@ impl CliBackend {
         }
     }
 
-    /// Creates the Pi backend for interactive mode with initial prompt.
-    ///
-    /// Runs pi TUI without `-p` or `--mode json`, passing the prompt as a
-    /// positional argument.
-    pub fn pi_interactive() -> Self {
-        Self {
-            command:       "pi".to_string(),
-            args:          vec!["--no-session".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
     /// Creates the Roo backend for headless execution.
     ///
     /// Uses `--print` for non-interactive output and `--ephemeral` for clean
     /// disk state. Prompts are always passed via `--prompt-file` (handled in
     /// `build_command()`).
-    pub fn roo() -> Self {
+    fn roo() -> Self {
         Self {
             command:       "roo".to_string(),
             args:          vec!["--print".to_string(), "--ephemeral".to_string()],
@@ -462,46 +254,6 @@ impl CliBackend {
             output_format: OutputFormat::Text,
             env_vars:      vec![],
         }
-    }
-
-    /// Creates the Roo backend for interactive mode with initial prompt.
-    ///
-    /// Runs roo TUI without `--print` or `--ephemeral`, passing the prompt
-    /// as a positional argument.
-    pub fn roo_interactive() -> Self {
-        Self {
-            command:       "roo".to_string(),
-            args:          vec![],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
-        }
-    }
-
-    /// Creates a custom backend from configuration.
-    ///
-    /// # Errors
-    /// Returns [`BackendError::CustomBackendRequiresCommand`] if no command is
-    /// specified.
-    pub fn custom(config: &AgentConfig) -> Result<Self> {
-        let command = config
-            .command
-            .clone()
-            .ok_or(BackendError::CustomBackendRequiresCommand)?;
-        let prompt_mode = match config.prompt_mode {
-            super::config::ConfigPromptMode::Stdin => PromptMode::Stdin,
-            super::config::ConfigPromptMode::Arg => PromptMode::Arg,
-        };
-
-        Ok(Self {
-            command,
-            args: config.args.clone(),
-            prompt_mode,
-            prompt_flag: config.prompt_flag.clone(),
-            output_format: OutputFormat::Text,
-            env_vars: vec![],
-        })
     }
 
     /// Creates a backend from a named backend string.
@@ -524,60 +276,6 @@ impl CliBackend {
                 name: name.to_string(),
             }
             .fail(),
-        }
-    }
-
-    /// Creates a backend from a named backend with additional args.
-    ///
-    /// # Errors
-    /// Returns error if the backend name is invalid.
-    pub fn from_name_with_args(name: &str, extra_args: &[String]) -> Result<Self> {
-        let mut backend = Self::from_name(name)?;
-        backend.args.extend(extra_args.iter().cloned());
-        if backend.command == "codex" {
-            Self::reconcile_codex_args(&mut backend.args);
-        }
-        Ok(backend)
-    }
-
-    /// Creates a backend configured for interactive mode with initial prompt.
-    ///
-    /// Returns the correct backend configuration for running an interactive
-    /// session with an initial prompt.
-    ///
-    /// # Errors
-    /// Returns [`BackendError::UnknownBackend`] if the backend name is not
-    /// recognized.
-    pub fn for_interactive_prompt(backend_name: &str) -> Result<Self> {
-        match backend_name {
-            "claude" => Ok(Self::claude_interactive()),
-            "kiro" => Ok(Self::kiro_interactive()),
-            "gemini" => Ok(Self::gemini_interactive()),
-            "codex" => Ok(Self::codex_interactive()),
-            "amp" => Ok(Self::amp_interactive()),
-            "copilot" => Ok(Self::copilot_interactive()),
-            "opencode" => Ok(Self::opencode_interactive()),
-            "pi" => Ok(Self::pi_interactive()),
-            "roo" => Ok(Self::roo_interactive()),
-            _ => UnknownBackendSnafu {
-                name: backend_name.to_string(),
-            }
-            .fail(),
-        }
-    }
-
-    /// Kiro in interactive mode (removes `--no-interactive`).
-    ///
-    /// Unlike headless `kiro()`, this allows the user to interact with
-    /// Kiro's TUI while still passing an initial prompt.
-    pub fn kiro_interactive() -> Self {
-        Self {
-            command:       "kiro-cli".to_string(),
-            args:          vec!["chat".to_string(), "--trust-all-tools".to_string()],
-            prompt_mode:   PromptMode::Arg,
-            prompt_flag:   None,
-            output_format: OutputFormat::Text,
-            env_vars:      vec![],
         }
     }
 
@@ -706,42 +404,6 @@ impl CliBackend {
                 .filter(|a| a != "--print" && a != "--ephemeral")
                 .collect(),
             _ => args, // claude, gemini, opencode unchanged
-        }
-    }
-
-    /// Reconciles codex args to resolve conflicting flags.
-    ///
-    /// Replaces deprecated `--dangerously-bypass-approvals-and-sandbox` with
-    /// `--yolo`, removes `--full-auto` when `--yolo` is present, and
-    /// deduplicates `--yolo` entries.
-    fn reconcile_codex_args(args: &mut Vec<String>) {
-        let had_dangerous_bypass = args
-            .iter()
-            .any(|arg| arg == "--dangerously-bypass-approvals-and-sandbox");
-        if had_dangerous_bypass {
-            args.retain(|arg| arg != "--dangerously-bypass-approvals-and-sandbox");
-            if !args.iter().any(|arg| arg == "--yolo") {
-                if let Some(pos) = args.iter().position(|arg| arg == "exec") {
-                    args.insert(pos + 1, "--yolo".to_string());
-                } else {
-                    args.push("--yolo".to_string());
-                }
-            }
-        }
-
-        if args.iter().any(|arg| arg == "--yolo") {
-            args.retain(|arg| arg != "--full-auto");
-            // Collapse duplicate --yolo entries to a single flag.
-            let mut seen_yolo = false;
-            args.retain(|arg| {
-                if arg == "--yolo" {
-                    if seen_yolo {
-                        return false;
-                    }
-                    seen_yolo = true;
-                }
-                true
-            });
         }
     }
 }
