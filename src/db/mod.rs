@@ -112,6 +112,21 @@ impl Database {
                 .context(error::SqlxSnafu)?;
         }
 
+        // Migration v3: clear misleading "applied" stage on discovered/bookmarked rows
+        if !applied_set.contains(&3) {
+            let migration = include_str!("../migrations/v3.sql");
+            sqlx::raw_sql(migration)
+                .execute(self.pool())
+                .await
+                .context(error::SqlxSnafu)?;
+
+            sqlx::query("INSERT OR IGNORE INTO migrations (version) VALUES (?1)")
+                .bind(3i64)
+                .execute(self.pool())
+                .await
+                .context(error::SqlxSnafu)?;
+        }
+
         Ok(())
     }
 

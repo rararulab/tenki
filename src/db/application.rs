@@ -32,13 +32,17 @@ impl Database {
 
         let id = uuid::Uuid::new_v4().to_string();
         let status_str = params.status.as_str();
+        let stage_str = match params.status {
+            AppStatus::Applied => Some(Stage::Applied.as_str()),
+            _ => None,
+        };
         let jt = params.job_type.map(|v| v.as_str().to_string());
         let jl = params.job_level.map(|v| v.as_str().to_string());
 
         sqlx::query(
             "INSERT INTO applications (id, company, position, jd_url, jd_text, location, status, \
-             salary, job_type, job_level, is_remote, source, company_url, notes)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+             stage, salary, job_type, job_level, is_remote, source, company_url, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         )
         .bind(&id)
         .bind(params.company)
@@ -47,6 +51,7 @@ impl Database {
         .bind(params.jd_text)
         .bind(params.location)
         .bind(status_str)
+        .bind(stage_str)
         .bind(params.salary)
         .bind(jt.as_deref())
         .bind(jl.as_deref())
@@ -364,7 +369,7 @@ impl Database {
 
         sqlx::query(
             "INSERT INTO applications (id, company, position, jd_url, jd_text, location, salary, \
-             source, status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+             source, status, stage) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )
         .bind(&id)
         .bind(&job.company)
@@ -375,6 +380,7 @@ impl Database {
         .bind(&job.salary)
         .bind(&job.source)
         .bind(status)
+        .bind(Option::<&str>::None)
         .execute(self.pool())
         .await
         .context(error::SqlxSnafu)?;
