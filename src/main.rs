@@ -8,7 +8,10 @@ mod paths;
 mod store;
 
 use clap::Parser;
-use cli::{AppCommand, Cli, Command, InterviewCommand, StageCommand, TaskCommand};
+use cli::{
+    AppCommand, Cli, Command, InterviewCommand, StageCommand, TaskCommand,
+    interview::{AddInterviewParams, UpdateInterviewParams},
+};
 use domain::{AddApplicationParams, ListApplicationParams, UpdateApplicationParams};
 
 #[tokio::main]
@@ -34,7 +37,6 @@ async fn main() {
     }
 }
 
-#[allow(clippy::too_many_lines)]
 async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let db = db::Database::open_default().await?;
@@ -48,212 +50,10 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             db.init().await?;
             eprintln!("tenki initialized at {}", db.path().display());
         }
-        Command::App(cmd) => match cmd {
-            AppCommand::Add {
-                company,
-                position,
-                jd_url,
-                jd_text,
-                location,
-                status,
-                salary,
-                job_type,
-                job_level,
-                is_remote,
-                source,
-                company_url,
-                notes,
-                json,
-            } => {
-                let remote = if is_remote { Some(true) } else { None };
-                let params = AddApplicationParams::builder()
-                    .company(&company)
-                    .position(&position)
-                    .maybe_jd_url(jd_url.as_deref())
-                    .maybe_jd_text(jd_text.as_deref())
-                    .maybe_location(location.as_deref())
-                    .status(status)
-                    .maybe_salary(salary.as_deref())
-                    .maybe_job_type(job_type)
-                    .maybe_job_level(job_level)
-                    .maybe_is_remote(remote)
-                    .maybe_source(source.as_deref())
-                    .maybe_company_url(company_url.as_deref())
-                    .maybe_notes(notes.as_deref())
-                    .build();
-                cli::app::add(&db, &params, json).await?;
-            }
-            AppCommand::List {
-                status,
-                company,
-                outcome,
-                stage,
-                source,
-                json,
-            } => {
-                let params = ListApplicationParams::builder()
-                    .maybe_status(status)
-                    .maybe_company(company.as_deref())
-                    .maybe_outcome(outcome)
-                    .maybe_stage(stage)
-                    .maybe_source(source.as_deref())
-                    .build();
-                cli::app::list(&db, &params, json).await?;
-            }
-            AppCommand::Show { id, json } => {
-                cli::app::show(&db, &id, json).await?;
-            }
-            AppCommand::Update {
-                id,
-                status,
-                outcome,
-                stage,
-                company,
-                position,
-                location,
-                jd_url,
-                jd_text,
-                salary,
-                job_type,
-                job_level,
-                is_remote,
-                source,
-                skills,
-                notes,
-                json,
-            } => {
-                let job_type_str = job_type.map(|v| v.as_str().to_string());
-                let job_level_str = job_level.map(|v| v.as_str().to_string());
-                let params = UpdateApplicationParams::builder()
-                    .maybe_company(company.as_deref())
-                    .maybe_position(position.as_deref())
-                    .maybe_location(location.as_deref())
-                    .maybe_jd_url(jd_url.as_deref())
-                    .maybe_jd_text(jd_text.as_deref())
-                    .maybe_salary(salary.as_deref())
-                    .maybe_job_type(job_type_str.as_deref())
-                    .maybe_job_level(job_level_str.as_deref())
-                    .maybe_is_remote(is_remote)
-                    .maybe_source(source.as_deref())
-                    .maybe_skills(skills.as_deref())
-                    .maybe_notes(notes.as_deref())
-                    .build();
-                cli::app::update(&db, &id, status, outcome, stage, &params, json).await?;
-            }
-            AppCommand::Delete { id, json } => {
-                cli::app::delete(&db, &id, json).await?;
-            }
-        },
-        Command::Interview(cmd) => match cmd {
-            InterviewCommand::Add {
-                app_id,
-                round,
-                r#type,
-                interviewer,
-                scheduled_at,
-                duration_mins,
-                json,
-            } => {
-                cli::interview::add(
-                    &db,
-                    &app_id,
-                    round,
-                    r#type,
-                    interviewer.as_deref(),
-                    scheduled_at.as_deref(),
-                    duration_mins,
-                    json,
-                )
-                .await?;
-            }
-            InterviewCommand::Update {
-                id,
-                status,
-                outcome,
-                interviewer,
-                scheduled_at,
-                duration_mins,
-                json,
-            } => {
-                cli::interview::update(
-                    &db,
-                    &id,
-                    status,
-                    outcome,
-                    interviewer.as_deref(),
-                    scheduled_at.as_deref(),
-                    duration_mins,
-                    json,
-                )
-                .await?;
-            }
-            InterviewCommand::Note { id, note, json } => {
-                cli::interview::note(&db, &id, &note, json).await?;
-            }
-            InterviewCommand::List { app_id, json } => {
-                cli::interview::list(&db, &app_id, json).await?;
-            }
-        },
-        Command::Task(cmd) => match cmd {
-            TaskCommand::Add {
-                app_id,
-                r#type,
-                title,
-                due_date,
-                notes,
-                json,
-            } => {
-                cli::task::add(
-                    &db,
-                    &app_id,
-                    r#type,
-                    &title,
-                    due_date.as_deref(),
-                    notes.as_deref(),
-                    json,
-                )
-                .await?;
-            }
-            TaskCommand::Update {
-                id,
-                title,
-                due_date,
-                notes,
-                json,
-            } => {
-                cli::task::update(
-                    &db,
-                    &id,
-                    title.as_deref(),
-                    due_date.as_deref(),
-                    notes.as_deref(),
-                    json,
-                )
-                .await?;
-            }
-            TaskCommand::Done { id, json } => {
-                cli::task::done(&db, &id, json).await?;
-            }
-            TaskCommand::Delete { id, json } => {
-                cli::task::delete(&db, &id, json).await?;
-            }
-            TaskCommand::List { app_id, json } => {
-                cli::task::list(&db, app_id.as_deref(), json).await?;
-            }
-        },
-        Command::Stage(cmd) => match cmd {
-            StageCommand::Set {
-                app_id,
-                stage,
-                note,
-                json,
-            } => {
-                cli::stage::set(&db, &app_id, stage, note.as_deref(), json).await?;
-            }
-            StageCommand::List { app_id, json } => {
-                cli::stage::list(&db, &app_id, json).await?;
-            }
-        },
+        Command::App(cmd) => handle_app(&db, cmd).await?,
+        Command::Interview(cmd) => handle_interview(&db, cmd).await?,
+        Command::Task(cmd) => handle_task(&db, cmd).await?,
+        Command::Stage(cmd) => handle_stage(&db, cmd).await?,
         Command::Analyze { id, json, backend } => {
             let full_id = db.resolve_app_id(&id).await?;
             cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
@@ -278,41 +78,283 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Command::Timeline { id, json } => {
             cli::stats::timeline(&db, &id, json).await?;
         }
-        Command::Config { action } => match action {
-            cli::ConfigAction::Set { key, value } => {
-                let mut cfg = app_config::load().clone();
-                set_config_field(&mut cfg, &key, &value);
-                app_config::save(&cfg)?;
-                eprintln!("set {key} = {value}");
-                println!(
-                    "{}",
-                    serde_json::json!({"ok": true, "action": "config_set", "key": key, "value": value})
-                );
-            }
-            cli::ConfigAction::Get { key } => {
-                let cfg = app_config::load();
-                let value = get_config_field(cfg, &key);
-                let display_value = value.as_deref().unwrap_or("(not set)");
-                println!(
-                    "{}",
-                    serde_json::json!({"ok": true, "action": "config_get", "key": key, "value": display_value})
-                );
-            }
-            cli::ConfigAction::List => {
-                let cfg = app_config::load();
-                let entries = config_as_map(cfg);
-                let map: serde_json::Map<String, serde_json::Value> = entries
-                    .into_iter()
-                    .map(|(k, v)| (k, serde_json::Value::String(v)))
-                    .collect();
-                println!(
-                    "{}",
-                    serde_json::json!({"ok": true, "action": "config_list", "entries": map})
-                );
-            }
-        },
+        Command::Config { action } => handle_config(action)?,
     }
 
+    Ok(())
+}
+
+/// Dispatch application subcommands.
+async fn handle_app(
+    db: &db::Database,
+    cmd: AppCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        AppCommand::Add {
+            company,
+            position,
+            jd_url,
+            jd_text,
+            location,
+            status,
+            salary,
+            job_type,
+            job_level,
+            is_remote,
+            source,
+            company_url,
+            notes,
+            json,
+        } => {
+            let remote = if is_remote { Some(true) } else { None };
+            let params = AddApplicationParams::builder()
+                .company(&company)
+                .position(&position)
+                .maybe_jd_url(jd_url.as_deref())
+                .maybe_jd_text(jd_text.as_deref())
+                .maybe_location(location.as_deref())
+                .status(status)
+                .maybe_salary(salary.as_deref())
+                .maybe_job_type(job_type)
+                .maybe_job_level(job_level)
+                .maybe_is_remote(remote)
+                .maybe_source(source.as_deref())
+                .maybe_company_url(company_url.as_deref())
+                .maybe_notes(notes.as_deref())
+                .build();
+            cli::app::add(db, &params, json).await?;
+        }
+        AppCommand::List {
+            status,
+            company,
+            outcome,
+            stage,
+            source,
+            json,
+        } => {
+            let params = ListApplicationParams::builder()
+                .maybe_status(status)
+                .maybe_company(company.as_deref())
+                .maybe_outcome(outcome)
+                .maybe_stage(stage)
+                .maybe_source(source.as_deref())
+                .build();
+            cli::app::list(db, &params, json).await?;
+        }
+        AppCommand::Show { id, json } => {
+            cli::app::show(db, &id, json).await?;
+        }
+        AppCommand::Update {
+            id,
+            status,
+            outcome,
+            stage,
+            company,
+            position,
+            location,
+            jd_url,
+            jd_text,
+            salary,
+            job_type,
+            job_level,
+            is_remote,
+            source,
+            skills,
+            notes,
+            json,
+        } => {
+            let job_type_str = job_type.map(|v| v.as_str().to_string());
+            let job_level_str = job_level.map(|v| v.as_str().to_string());
+            let params = UpdateApplicationParams::builder()
+                .maybe_company(company.as_deref())
+                .maybe_position(position.as_deref())
+                .maybe_location(location.as_deref())
+                .maybe_jd_url(jd_url.as_deref())
+                .maybe_jd_text(jd_text.as_deref())
+                .maybe_salary(salary.as_deref())
+                .maybe_job_type(job_type_str.as_deref())
+                .maybe_job_level(job_level_str.as_deref())
+                .maybe_is_remote(is_remote)
+                .maybe_source(source.as_deref())
+                .maybe_skills(skills.as_deref())
+                .maybe_notes(notes.as_deref())
+                .build();
+            cli::app::update(db, &id, status, outcome, stage, &params, json).await?;
+        }
+        AppCommand::Delete { id, json } => {
+            cli::app::delete(db, &id, json).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch interview subcommands.
+async fn handle_interview(
+    db: &db::Database,
+    cmd: InterviewCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        InterviewCommand::Add {
+            app_id,
+            round,
+            r#type,
+            interviewer,
+            scheduled_at,
+            duration_mins,
+            json,
+        } => {
+            let params = AddInterviewParams::builder()
+                .app_id(&app_id)
+                .round(round)
+                .interview_type(r#type)
+                .maybe_interviewer(interviewer.as_deref())
+                .maybe_scheduled_at(scheduled_at.as_deref())
+                .maybe_duration_mins(duration_mins)
+                .json(json)
+                .build();
+            cli::interview::add(db, &params).await?;
+        }
+        InterviewCommand::Update {
+            id,
+            status,
+            outcome,
+            interviewer,
+            scheduled_at,
+            duration_mins,
+            json,
+        } => {
+            let params = UpdateInterviewParams::builder()
+                .id(&id)
+                .maybe_status(status)
+                .maybe_outcome(outcome)
+                .maybe_interviewer(interviewer.as_deref())
+                .maybe_scheduled_at(scheduled_at.as_deref())
+                .maybe_duration_mins(duration_mins)
+                .json(json)
+                .build();
+            cli::interview::update(db, &params).await?;
+        }
+        InterviewCommand::Note { id, note, json } => {
+            cli::interview::note(db, &id, &note, json).await?;
+        }
+        InterviewCommand::List { app_id, json } => {
+            cli::interview::list(db, &app_id, json).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch task subcommands.
+async fn handle_task(
+    db: &db::Database,
+    cmd: TaskCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        TaskCommand::Add {
+            app_id,
+            r#type,
+            title,
+            due_date,
+            notes,
+            json,
+        } => {
+            cli::task::add(
+                db,
+                &app_id,
+                r#type,
+                &title,
+                due_date.as_deref(),
+                notes.as_deref(),
+                json,
+            )
+            .await?;
+        }
+        TaskCommand::Update {
+            id,
+            title,
+            due_date,
+            notes,
+            json,
+        } => {
+            cli::task::update(
+                db,
+                &id,
+                title.as_deref(),
+                due_date.as_deref(),
+                notes.as_deref(),
+                json,
+            )
+            .await?;
+        }
+        TaskCommand::Done { id, json } => {
+            cli::task::done(db, &id, json).await?;
+        }
+        TaskCommand::Delete { id, json } => {
+            cli::task::delete(db, &id, json).await?;
+        }
+        TaskCommand::List { app_id, json } => {
+            cli::task::list(db, app_id.as_deref(), json).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch stage subcommands.
+async fn handle_stage(
+    db: &db::Database,
+    cmd: StageCommand,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match cmd {
+        StageCommand::Set {
+            app_id,
+            stage,
+            note,
+            json,
+        } => {
+            cli::stage::set(db, &app_id, stage, note.as_deref(), json).await?;
+        }
+        StageCommand::List { app_id, json } => {
+            cli::stage::list(db, &app_id, json).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch config subcommands.
+fn handle_config(action: cli::ConfigAction) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    match action {
+        cli::ConfigAction::Set { key, value } => {
+            let mut cfg = app_config::load().clone();
+            set_config_field(&mut cfg, &key, &value);
+            app_config::save(&cfg)?;
+            eprintln!("set {key} = {value}");
+            println!(
+                "{}",
+                serde_json::json!({"ok": true, "action": "config_set", "key": key, "value": value})
+            );
+        }
+        cli::ConfigAction::Get { key } => {
+            let cfg = app_config::load();
+            let value = get_config_field(cfg, &key);
+            let display_value = value.as_deref().unwrap_or("(not set)");
+            println!(
+                "{}",
+                serde_json::json!({"ok": true, "action": "config_get", "key": key, "value": display_value})
+            );
+        }
+        cli::ConfigAction::List => {
+            let cfg = app_config::load();
+            let entries = config_as_map(cfg);
+            let map: serde_json::Map<String, serde_json::Value> = entries
+                .into_iter()
+                .map(|(k, v)| (k, serde_json::Value::String(v)))
+                .collect();
+            println!(
+                "{}",
+                serde_json::json!({"ok": true, "action": "config_list", "entries": map})
+            );
+        }
+    }
     Ok(())
 }
 

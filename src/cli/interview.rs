@@ -7,29 +7,39 @@ use crate::{
     error::{self, Result},
 };
 
-#[allow(clippy::too_many_arguments)]
-pub async fn add(
-    db: &Database,
-    app_id: &str,
-    round: i32,
-    interview_type: InterviewType,
-    interviewer: Option<&str>,
-    scheduled_at: Option<&str>,
-    duration_mins: Option<i64>,
-    json: bool,
-) -> Result<()> {
-    let full_app_id = db.resolve_app_id(app_id).await?;
+/// Parameters for adding an interview.
+#[derive(bon::Builder)]
+pub struct AddInterviewParams<'a> {
+    /// Short or full application ID.
+    pub app_id:         &'a str,
+    /// Interview round number.
+    pub round:          i32,
+    /// Type of interview (e.g. phone, onsite).
+    pub interview_type: InterviewType,
+    /// Name of the interviewer.
+    pub interviewer:    Option<&'a str>,
+    /// Scheduled date/time string.
+    pub scheduled_at:   Option<&'a str>,
+    /// Duration in minutes.
+    pub duration_mins:  Option<i64>,
+    /// Whether to output JSON.
+    pub json:           bool,
+}
+
+/// Add a new interview record for an application.
+pub async fn add(db: &Database, params: &AddInterviewParams<'_>) -> Result<()> {
+    let full_app_id = db.resolve_app_id(params.app_id).await?;
     let id = db
         .add_interview(
             &full_app_id,
-            i64::from(round),
-            interview_type,
-            interviewer,
-            scheduled_at,
-            duration_mins,
+            i64::from(params.round),
+            params.interview_type,
+            params.interviewer,
+            params.scheduled_at,
+            params.duration_mins,
         )
         .await?;
-    if json {
+    if params.json {
         let out = serde_json::json!({ "id": id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
     } else {
@@ -38,28 +48,38 @@ pub async fn add(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub async fn update(
-    db: &Database,
-    id: &str,
-    status: Option<InterviewStatus>,
-    outcome: Option<InterviewOutcome>,
-    interviewer: Option<&str>,
-    scheduled_at: Option<&str>,
-    duration_mins: Option<i64>,
-    json: bool,
-) -> Result<()> {
-    let full_id = db.resolve_interview_id(id).await?;
+/// Parameters for updating an interview.
+#[derive(bon::Builder)]
+pub struct UpdateInterviewParams<'a> {
+    /// Short or full interview ID.
+    pub id:            &'a str,
+    /// New interview status.
+    pub status:        Option<InterviewStatus>,
+    /// New interview outcome.
+    pub outcome:       Option<InterviewOutcome>,
+    /// Updated interviewer name.
+    pub interviewer:   Option<&'a str>,
+    /// Updated scheduled date/time.
+    pub scheduled_at:  Option<&'a str>,
+    /// Updated duration in minutes.
+    pub duration_mins: Option<i64>,
+    /// Whether to output JSON.
+    pub json:          bool,
+}
+
+/// Update an existing interview record.
+pub async fn update(db: &Database, params: &UpdateInterviewParams<'_>) -> Result<()> {
+    let full_id = db.resolve_interview_id(params.id).await?;
     db.update_interview(
         &full_id,
-        status,
-        outcome,
-        interviewer,
-        scheduled_at,
-        duration_mins,
+        params.status,
+        params.outcome,
+        params.interviewer,
+        params.scheduled_at,
+        params.duration_mins,
     )
     .await?;
-    if json {
+    if params.json {
         let out = serde_json::json!({ "updated": full_id });
         println!("{}", serde_json::to_string(&out).context(error::JsonSnafu)?);
     } else {
