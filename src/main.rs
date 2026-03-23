@@ -4,6 +4,7 @@ mod cli;
 mod db;
 mod domain;
 mod error;
+mod extractor;
 mod paths;
 mod store;
 
