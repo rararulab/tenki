@@ -341,7 +341,6 @@ impl Database {
 
     /// Import a discovered job as a new application if its `jd_url` is not already in the DB.
     /// Returns `Some(id)` if imported, `None` if duplicate.
-    #[allow(dead_code)] // wired in Task 4 (discover command)
     pub async fn import_discovered_job(
         &self,
         job: &crate::extractor::DiscoveredJob,

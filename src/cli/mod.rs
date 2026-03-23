@@ -1,5 +1,6 @@
 pub mod analyze;
 pub mod app;
+pub mod discover;
 pub mod export;
 pub mod interview;
 pub mod stage;
@@ -31,6 +32,24 @@ pub struct Cli {
 pub enum Command {
     /// Initialize the tenki database
     Init,
+    /// Discover jobs from external sources via `OpenCLI`
+    Discover {
+        /// Source platform (boss, linkedin). Omit for all.
+        #[arg(long)]
+        source:   Option<String>,
+        /// Search query (e.g. "rust developer")
+        #[arg(long)]
+        query:    String,
+        /// Location filter
+        #[arg(long)]
+        location: Option<String>,
+        /// Maximum results per source
+        #[arg(long)]
+        limit:    Option<u32>,
+        /// Output as JSON
+        #[arg(long)]
+        json:     bool,
+    },
     /// Manage job applications (add, list, show, update, delete)
     #[command(subcommand)]
     App(AppCommand),

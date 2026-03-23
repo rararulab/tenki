@@ -4,7 +4,6 @@ mod cli;
 mod db;
 mod domain;
 mod error;
-#[allow(dead_code)] // wired in Task 4 (discover command)
 mod extractor;
 mod paths;
 mod store;
@@ -51,6 +50,16 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
         Command::Init => {
             db.init().await?;
             eprintln!("tenki initialized at {}", db.path().display());
+        }
+        Command::Discover {
+            source,
+            query,
+            location,
+            limit,
+            json,
+        } => {
+            cli::discover::run(&db, source.as_deref(), &query, location.as_deref(), limit, json)
+                .await?;
         }
         Command::App(cmd) => handle_app(&db, cmd).await?,
         Command::Interview(cmd) => handle_interview(&db, cmd).await?,
