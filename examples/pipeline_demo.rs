@@ -54,10 +54,7 @@ fn ensure_command_exists(command: &str, probe_arg: &str) -> Result<(), Box<dyn s
     }
 }
 
-fn run_tenki(
-    data_dir: &Path,
-    args: &[String],
-) -> Result<Output, Box<dyn std::error::Error>> {
+fn run_tenki(data_dir: &Path, args: &[String]) -> Result<Output, Box<dyn std::error::Error>> {
     let output = Command::new("tenki")
         .args(args)
         .env("TENKI_DATA_DIR", data_dir)
@@ -118,9 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let resume_repo = resume_tmp.path().to_path_buf();
 
     println!("=== tenki pre-application example ===");
-    println!(
-        "query={query} | location={location} | source={source} | top_n={top_n}"
-    );
+    println!("query={query} | location={location} | source={source} | top_n={top_n}");
     println!("TENKI_DATA_DIR={}", data_dir.display());
     println!();
 
@@ -137,7 +132,10 @@ Python Engineer (3 years)
     )?;
     run_git(&resume_repo, &["init", "-q"])?;
     run_git(&resume_repo, &["add", "resume.typ"])?;
-    run_git(&resume_repo, &["commit", "-q", "-m", "init synthetic resume profile"])?;
+    run_git(
+        &resume_repo,
+        &["commit", "-q", "-m", "init synthetic resume profile"],
+    )?;
     println!("resume_repo={}", resume_repo.display());
     println!();
 
@@ -197,7 +195,8 @@ Python Engineer (3 years)
             source.clone(),
         ],
     )?;
-    // Force analyze/tailor keyword fallback so this example doesn't require an agent CLI.
+    // Force analyze/tailor keyword fallback so this example doesn't require an
+    // agent CLI.
     run_tenki_checked(
         &data_dir,
         &[
@@ -241,9 +240,7 @@ Python Engineer (3 years)
         .as_array()
         .ok_or("unexpected JSON format from `tenki app list --json`")?;
     if apps.is_empty() {
-        return Err(
-            "no discovered jobs found; try a broader QUERY/LOCATION and rerun".into(),
-        );
+        return Err("no discovered jobs found; try a broader QUERY/LOCATION and rerun".into());
     }
 
     for app in apps {
@@ -259,9 +256,7 @@ Python Engineer (3 years)
                 String::from("update"),
                 short_id.to_string(),
                 String::from("--skills"),
-                String::from(
-                    "Python,FastAPI,LLM,RAG,Prompt Engineering,Vector Database,Docker",
-                ),
+                String::from("Python,FastAPI,LLM,RAG,Prompt Engineering,Vector Database,Docker"),
                 String::from("--notes"),
                 String::from(
                     "Synthetic profile: 3 years Python engineer targeting Tokyo LLM/AI roles",
