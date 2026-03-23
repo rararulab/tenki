@@ -1,6 +1,6 @@
 //! Job discovery extractor system.
 //!
-//! Provides the [`Extractor`] trait and platform adapters (e.g. OpenCLI)
+//! Provides the [`Extractor`] trait and platform adapters (e.g. `OpenCLI`)
 //! for discovering jobs from external sources.
 
 pub mod opencli;
@@ -13,8 +13,8 @@ use crate::error::Result;
 /// Trait for job discovery backends.
 pub trait Extractor: Send + Sync {
     /// Human-readable name of this extractor.
-    fn name(&self) -> &str;
-    /// Supported source identifiers (e.g. ["boss", "linkedin"]).
+    fn name(&self) -> &'static str;
+    /// Supported source identifiers (e.g. `"boss"`, `"linkedin"`).
     fn sources(&self) -> &[&str];
     /// Discover jobs matching the given parameters.
     fn discover(

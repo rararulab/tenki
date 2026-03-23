@@ -4,6 +4,7 @@ mod cli;
 mod db;
 mod domain;
 mod error;
+#[allow(dead_code)] // wired in Task 4 (discover command)
 mod extractor;
 mod paths;
 mod store;

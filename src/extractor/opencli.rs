@@ -1,4 +1,4 @@
-//! OpenCLI adapter — discovers jobs via `opencli boss search` / `opencli linkedin search`.
+//! `OpenCLI` adapter — discovers jobs via `opencli boss search` / `opencli linkedin search`.
 
 use serde::Deserialize;
 use snafu::ResultExt as _;
@@ -11,7 +11,7 @@ use crate::error::{self, Result, TenkiError};
 pub struct OpenCliExtractor;
 
 impl Extractor for OpenCliExtractor {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "opencli"
     }
 
