@@ -52,6 +52,12 @@ pub enum TenkiError {
         "missing JD text for application {id} — cannot analyze without job description"
     ))]
     MissingJdText { id: String },
+
+    #[snafu(display("opencli not found — install from https://github.com/jackwener/opencli"))]
+    OpencliNotFound,
+
+    #[snafu(display("opencli execution failed: {message}"))]
+    OpencliExecution { message: String },
 }
 
 /// Convenience result type for tenki operations.
