@@ -28,12 +28,29 @@ impl Extractor for OpenCliExtractor {
 
 /// Discover jobs from a single source via opencli subprocess.
 pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<DiscoveredJob>> {
+    if !matches!(source, "boss" | "linkedin") {
+        return Err(TenkiError::OpencliExecution {
+            message: format!("unsupported source: {source}"),
+        });
+    }
+
     let mut cmd = Command::new("opencli");
-    cmd.arg(source).arg("search").arg("--json");
-    cmd.arg("--query").arg(&params.query);
+    cmd.arg(source)
+        .arg("search")
+        .arg(&params.query)
+        .arg("--format")
+        .arg("json");
 
     if let Some(loc) = &params.location {
-        cmd.arg("--location").arg(loc);
+        match source {
+            "linkedin" => {
+                cmd.arg("--location").arg(loc);
+            }
+            "boss" => {
+                cmd.arg("--city").arg(loc);
+            }
+            _ => unreachable!(),
+        }
     }
     if let Some(limit) = params.limit {
         cmd.arg("--limit").arg(limit.to_string());
@@ -68,15 +85,26 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
 /// Raw JSON shape returned by opencli search.
 #[derive(Debug, Deserialize)]
 struct RawOpenCliJob {
-    #[serde(alias = "jobName", alias = "job_name")]
+    #[serde(alias = "jobName", alias = "job_name", alias = "title", alias = "name")]
     title:    Option<String>,
-    #[serde(alias = "brandName", alias = "brand_name", alias = "companyName")]
+    #[serde(
+        alias = "brandName",
+        alias = "brand_name",
+        alias = "companyName",
+        alias = "company"
+    )]
     company:  Option<String>,
     #[serde(alias = "url", alias = "link")]
     jd_url:   Option<String>,
     #[serde(alias = "description", alias = "jd")]
     jd_text:  Option<String>,
-    #[serde(alias = "cityName", alias = "city_name", alias = "city")]
+    #[serde(
+        alias = "cityName",
+        alias = "city_name",
+        alias = "city",
+        alias = "location",
+        alias = "area"
+    )]
     location: Option<String>,
     #[serde(alias = "salaryDesc", alias = "salary_desc", alias = "salary")]
     salary:   Option<String>,
@@ -125,11 +153,10 @@ mod tests {
     fn parse_linkedin_json() {
         let json = r#"[
             {
-                "job_name": "Backend Engineer",
-                "companyName": "Stripe",
-                "link": "https://linkedin.com/jobs/456",
-                "description": "Build payment APIs",
-                "city": "Remote",
+                "title": "Backend Engineer",
+                "company": "Stripe",
+                "url": "https://linkedin.com/jobs/456",
+                "location": "Remote",
                 "salary": "$180-220K"
             }
         ]"#;
@@ -143,7 +170,11 @@ mod tests {
         assert_eq!(jobs[0].title, "Backend Engineer");
         assert_eq!(jobs[0].company, "Stripe");
         assert_eq!(jobs[0].source, "linkedin");
-        assert_eq!(jobs[0].jd_text.as_deref(), Some("Build payment APIs"));
+        assert_eq!(jobs[0].location.as_deref(), Some("Remote"));
+        assert_eq!(
+            jobs[0].jd_url.as_deref(),
+            Some("https://linkedin.com/jobs/456")
+        );
     }
 
     #[test]
