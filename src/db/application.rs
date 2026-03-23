@@ -307,6 +307,32 @@ impl Database {
         Ok(())
     }
 
+    /// Update tailored resume fields for an application.
+    pub async fn update_tailored(
+        &self,
+        id: &str,
+        headline: &str,
+        summary: &str,
+        skills: &str,
+    ) -> Result<()> {
+        let result = sqlx::query(
+            "UPDATE applications SET tailored_headline = ?1, tailored_summary = ?2, \
+             tailored_skills = ?3, updated_at = CURRENT_TIMESTAMP WHERE id = ?4",
+        )
+        .bind(headline)
+        .bind(summary)
+        .bind(skills)
+        .bind(id)
+        .execute(self.pool())
+        .await
+        .context(error::SqlxSnafu)?;
+
+        if result.rows_affected() == 0 {
+            return Err(TenkiError::ApplicationNotFound { id: id.to_string() });
+        }
+        Ok(())
+    }
+
     /// Retrieve the compiled resume PDF bytes.
     pub async fn get_resume_pdf(&self, id: &str) -> Result<Option<Vec<u8>>> {
         let row: Option<(Vec<u8>,)> = sqlx::query_as(

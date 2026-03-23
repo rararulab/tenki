@@ -4,6 +4,7 @@ pub mod export;
 pub mod interview;
 pub mod stage;
 pub mod stats;
+pub mod tailor;
 pub mod task;
 
 use clap::{Parser, Subcommand};
@@ -49,10 +50,16 @@ pub enum Command {
         #[arg(long)]
         backend: Option<String>,
     },
-    /// Tailor resume for a job (not yet implemented)
+    /// Tailor resume for a specific job
     Tailor {
         /// Application ID (8-char prefix or full UUID)
-        id: String,
+        id:      String,
+        /// Output as JSON
+        #[arg(long)]
+        json:    bool,
+        /// Override agent backend (e.g., "claude", "gemini")
+        #[arg(long)]
+        backend: Option<String>,
     },
     /// Export resume (typ or PDF)
     Export {
