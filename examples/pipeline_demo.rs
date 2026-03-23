@@ -124,7 +124,7 @@ fn run_tenki_checked(data_dir: &Path, args: &[&str]) -> DynResult<String> {
         Ok(String::from_utf8(output.stdout)?)
     } else {
         Err(Box::new(CmdError {
-            args:   args.iter().map(|s| s.to_string()).collect(),
+            args:   args.iter().map(std::string::ToString::to_string).collect(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
             stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         }))
