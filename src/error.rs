@@ -58,6 +58,12 @@ pub enum TenkiError {
 
     #[snafu(display("opencli execution failed: {message}"))]
     OpencliExecution { message: String },
+
+    #[snafu(display("resume config missing — set resume.repo_path, resume.build_command, resume.output_path in config"))]
+    ResumeConfigMissing,
+
+    #[snafu(display("build command failed: {message}"))]
+    BuildCommandFailed { message: String },
 }
 
 /// Convenience result type for tenki operations.

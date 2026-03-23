@@ -442,6 +442,9 @@ fn set_config_field(
                 .parse()
                 .map_err(|_| format!("invalid integer for idle_timeout_secs: {value}"))?;
         }
+        "resume.repo_path" => cfg.resume.repo_path = Some(value.to_string()),
+        "resume.build_command" => cfg.resume.build_command = Some(value.to_string()),
+        "resume.output_path" => cfg.resume.output_path = Some(value.to_string()),
         _ => return Err(format!("unknown config key: {key}").into()),
     }
     Ok(())
@@ -455,6 +458,9 @@ fn get_config_field(cfg: &app_config::AppConfig, key: &str) -> Option<String> {
         "display.date_format" => Some(cfg.display.date_format.clone()),
         "agent.backend" => Some(cfg.agent.backend.clone()),
         "agent.idle_timeout_secs" => Some(cfg.agent.idle_timeout_secs.to_string()),
+        "resume.repo_path" => cfg.resume.repo_path.clone(),
+        "resume.build_command" => cfg.resume.build_command.clone(),
+        "resume.output_path" => cfg.resume.output_path.clone(),
         _ => None,
     }
 }
@@ -475,6 +481,18 @@ fn config_as_map(cfg: &app_config::AppConfig) -> Vec<(String, String)> {
         (
             "agent.idle_timeout_secs".to_string(),
             cfg.agent.idle_timeout_secs.to_string(),
+        ),
+        (
+            "resume.repo_path".to_string(),
+            cfg.resume.repo_path.clone().unwrap_or_default(),
+        ),
+        (
+            "resume.build_command".to_string(),
+            cfg.resume.build_command.clone().unwrap_or_default(),
+        ),
+        (
+            "resume.output_path".to_string(),
+            cfg.resume.output_path.clone().unwrap_or_default(),
         ),
     ]
 }
