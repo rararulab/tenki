@@ -16,7 +16,11 @@ use crate::domain::{
 
 /// Job application tracker — agent-native CLI.
 #[derive(Parser)]
-#[command(name = "tenki", about = "Job application tracker — agent-native")]
+#[command(
+    name = "tenki",
+    version,
+    about = "Job application tracker — agent-native"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -74,14 +78,20 @@ pub enum Command {
         /// Output file path
         #[arg(short, long)]
         output: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json:   bool,
     },
     /// Import a resume typ file
     Import {
         /// Application ID (8-char prefix or full UUID)
-        id:  String,
+        id:   String,
         /// Path to the Typst file to import
         #[arg(long)]
-        typ: String,
+        typ:  String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Show aggregate statistics
     Stats {
