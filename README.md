@@ -111,17 +111,28 @@ Pipeline steps:
 4. **Tailor** — generate tailored resume content (skip with `--skip-tailor`)
 5. **Export** — build PDF resumes via agent (skip with `--skip-export`)
 
-### Resume Export (Optional)
+### Realistic Pipeline Flow
 
-Configure a resume repo for automated PDF generation:
+For real usage, set resume repo + job preferences once, then run pipeline.
 
 ```bash
-tenki config set resume.repo_path /path/to/resume
+# 1) Configure resume repository (required for PDF export)
+tenki config set resume.repo_path ~/code/resume
 tenki config set resume.build_command "make pdf"
-tenki config set resume.output_path "output/resume.pdf"
+tenki config set resume.output_path build/resume.pdf
+
+# 2) Configure your job preferences
+tenki config set preferences.query "rust backend engineer"
+tenki config set preferences.location "Tokyo"
+tenki config set preferences.sources "linkedin"
+
+# 3) Run pipeline (query/location/sources will use preferences by default)
+tenki pipeline run --top-n 10 --min-score 60
 ```
 
-The export step: agent edits resume source files → build command generates PDF → PDF stored in DB → `git checkout .` restores the repo.
+Notes:
+- If you omit `--sources`, pipeline uses `preferences.sources`; if that is empty, it defaults to `linkedin`.
+- CLI flags still override preferences (for one-off searches).
 
 ## Commands
 

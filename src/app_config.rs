@@ -11,13 +11,15 @@ static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
 #[serde(default)]
 pub struct AppConfig {
     /// Default values for new applications.
-    pub defaults: DefaultsConfig,
+    pub defaults:    DefaultsConfig,
     /// Display preferences.
-    pub display:  DisplayConfig,
+    pub display:     DisplayConfig,
     /// Agent backend configuration.
-    pub agent:    crate::agent::AgentConfig,
+    pub agent:       crate::agent::AgentConfig,
     /// Resume repository configuration.
-    pub resume:   ResumeConfig,
+    pub resume:      ResumeConfig,
+    /// Job search preferences for pipeline defaults.
+    pub preferences: JobPreferencesConfig,
 }
 
 /// Resume repository configuration for automated PDF generation.
@@ -30,6 +32,18 @@ pub struct ResumeConfig {
     pub build_command: Option<String>,
     /// Relative path to the built PDF within the repo.
     pub output_path:   Option<String>,
+}
+
+/// Preferred job search filters used by `pipeline run` when flags are omitted.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct JobPreferencesConfig {
+    /// Preferred search query (e.g. "rust backend engineer").
+    pub query:    Option<String>,
+    /// Preferred location filter.
+    pub location: Option<String>,
+    /// Preferred source platforms (e.g. `["linkedin"]`).
+    pub sources:  Vec<String>,
 }
 
 /// Default values applied when creating new applications.

@@ -380,10 +380,12 @@ async fn handle_pipeline(
             skip_export,
             json,
         } => {
+            let cfg = app_config::load();
+            let resolved = resolve_pipeline_inputs(query, sources, location, cfg)?;
             let config = pipeline::PipelineConfig::builder()
-                .query(query)
-                .sources(sources)
-                .maybe_location(location)
+                .query(resolved.query)
+                .sources(resolved.sources)
+                .maybe_location(resolved.location)
                 .top_n(top_n)
                 .min_score(min_score)
                 .skip_tailor(skip_tailor)
@@ -393,6 +395,46 @@ async fn handle_pipeline(
         }
     }
     Ok(())
+}
+
+#[derive(Debug)]
+struct ResolvedPipelineInputs {
+    query:    String,
+    sources:  Vec<String>,
+    location: Option<String>,
+}
+
+fn resolve_pipeline_inputs(
+    query: Option<String>,
+    sources: Vec<String>,
+    location: Option<String>,
+    cfg: &app_config::AppConfig,
+) -> error::Result<ResolvedPipelineInputs> {
+    let resolved_query = query
+        .or_else(|| cfg.preferences.query.clone())
+        .ok_or_else(|| error::TenkiError::Config {
+            message: "pipeline query missing — use --query or set preferences.query via `tenki \
+                      config set`"
+                .to_string(),
+        })?;
+
+    let resolved_sources = if sources.is_empty() {
+        if cfg.preferences.sources.is_empty() {
+            vec!["linkedin".to_string()]
+        } else {
+            cfg.preferences.sources.clone()
+        }
+    } else {
+        sources
+    };
+
+    let resolved_location = location.or_else(|| cfg.preferences.location.clone());
+
+    Ok(ResolvedPipelineInputs {
+        query:    resolved_query,
+        sources:  resolved_sources,
+        location: resolved_location,
+    })
 }
 
 /// Dispatch config subcommands.
@@ -452,6 +494,9 @@ fn set_config_field(
         "resume.repo_path" => cfg.resume.repo_path = Some(value.to_string()),
         "resume.build_command" => cfg.resume.build_command = Some(value.to_string()),
         "resume.output_path" => cfg.resume.output_path = Some(value.to_string()),
+        "preferences.query" => cfg.preferences.query = Some(value.to_string()),
+        "preferences.location" => cfg.preferences.location = Some(value.to_string()),
+        "preferences.sources" => cfg.preferences.sources = parse_csv_values(value),
         _ => return Err(format!("unknown config key: {key}").into()),
     }
     Ok(())
@@ -468,6 +513,9 @@ fn get_config_field(cfg: &app_config::AppConfig, key: &str) -> Option<String> {
         "resume.repo_path" => cfg.resume.repo_path.clone(),
         "resume.build_command" => cfg.resume.build_command.clone(),
         "resume.output_path" => cfg.resume.output_path.clone(),
+        "preferences.query" => cfg.preferences.query.clone(),
+        "preferences.location" => cfg.preferences.location.clone(),
+        "preferences.sources" => Some(cfg.preferences.sources.join(",")),
         _ => None,
     }
 }
@@ -501,5 +549,92 @@ fn config_as_map(cfg: &app_config::AppConfig) -> Vec<(String, String)> {
             "resume.output_path".to_string(),
             cfg.resume.output_path.clone().unwrap_or_default(),
         ),
+        (
+            "preferences.query".to_string(),
+            cfg.preferences.query.clone().unwrap_or_default(),
+        ),
+        (
+            "preferences.location".to_string(),
+            cfg.preferences.location.clone().unwrap_or_default(),
+        ),
+        (
+            "preferences.sources".to_string(),
+            cfg.preferences.sources.join(","),
+        ),
     ]
+}
+
+fn parse_csv_values(input: &str) -> Vec<String> {
+    input
+        .split(',')
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_pipeline_inputs_uses_preferences_with_linkedin_fallback_source() {
+        let mut cfg = app_config::AppConfig::default();
+        cfg.preferences.query = Some("rust backend".to_string());
+        cfg.preferences.location = Some("tokyo".to_string());
+
+        let resolved = resolve_pipeline_inputs(None, vec![], None, &cfg).expect("resolved");
+        assert_eq!(resolved.query, "rust backend");
+        assert_eq!(resolved.location.as_deref(), Some("tokyo"));
+        assert_eq!(resolved.sources, vec!["linkedin"]);
+    }
+
+    #[test]
+    fn resolve_pipeline_inputs_pref_sources_are_used_when_cli_sources_empty() {
+        let mut cfg = app_config::AppConfig::default();
+        cfg.preferences.query = Some("platform engineer".to_string());
+        cfg.preferences.sources = vec!["linkedin".to_string(), "boss".to_string()];
+
+        let resolved = resolve_pipeline_inputs(None, vec![], None, &cfg).expect("resolved");
+        assert_eq!(resolved.sources, vec!["linkedin", "boss"]);
+    }
+
+    #[test]
+    fn resolve_pipeline_inputs_cli_overrides_preferences() {
+        let mut cfg = app_config::AppConfig::default();
+        cfg.preferences.query = Some("old query".to_string());
+        cfg.preferences.location = Some("tokyo".to_string());
+        cfg.preferences.sources = vec!["linkedin".to_string()];
+
+        let resolved = resolve_pipeline_inputs(
+            Some("new query".to_string()),
+            vec!["boss".to_string()],
+            Some("osaka".to_string()),
+            &cfg,
+        )
+        .expect("resolved");
+
+        assert_eq!(resolved.query, "new query");
+        assert_eq!(resolved.location.as_deref(), Some("osaka"));
+        assert_eq!(resolved.sources, vec!["boss"]);
+    }
+
+    #[test]
+    fn resolve_pipeline_inputs_requires_query_from_cli_or_preferences() {
+        let cfg = app_config::AppConfig::default();
+        let err = resolve_pipeline_inputs(None, vec![], None, &cfg).expect_err("must fail");
+        assert!(err.to_string().contains("preferences.query"));
+    }
+
+    #[test]
+    fn preferences_sources_config_roundtrip() {
+        let mut cfg = app_config::AppConfig::default();
+        set_config_field(&mut cfg, "preferences.sources", "linkedin, boss , ,xing")
+            .expect("set config");
+        assert_eq!(cfg.preferences.sources, vec!["linkedin", "boss", "xing"]);
+        assert_eq!(
+            get_config_field(&cfg, "preferences.sources").as_deref(),
+            Some("linkedin,boss,xing")
+        );
+    }
 }
