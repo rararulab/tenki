@@ -111,28 +111,44 @@ Pipeline steps:
 4. **Tailor** — generate tailored resume content (skip with `--skip-tailor`)
 5. **Export** — build PDF resumes via agent (skip with `--skip-export`)
 
-### Realistic Pipeline Flow
+### End-to-End Example (Stop Before Apply)
 
-For real usage, set resume repo + job preferences once, then run pipeline.
+Goal: a synthetic 3-year Python candidate targeting Tokyo LLM/AI roles.
+This walkthrough stops after tailoring (pre-application review).
 
 ```bash
-# 1) Configure resume repository (required for PDF export)
-tenki config set resume.repo_path ~/code/resume
+# 1) Configure resume repo (kept for later export/apply phase)
+tenki config set resume.repo_path ~/code/fake-resume
 tenki config set resume.build_command "make pdf"
 tenki config set resume.output_path build/resume.pdf
 
-# 2) Configure your job preferences
-tenki config set preferences.query "rust backend engineer"
+# 2) Set job preferences
+tenki config set preferences.query "python llm ai"
 tenki config set preferences.location "Tokyo"
 tenki config set preferences.sources "linkedin"
 
-# 3) Run pipeline (query/location/sources will use preferences by default)
-tenki pipeline run --top-n 10 --min-score 60
+# 3) Discover jobs from LinkedIn
+tenki discover --source linkedin --query "python llm ai" --location "Tokyo"
+
+# 4) Inject synthetic candidate profile (3-year Python resume) into discovered apps
+for id in $(tenki app list --status discovered --json | jq -r '.[].id'); do
+  short=${id:0:8}
+  tenki app update "$short" \
+    --skills "Python,FastAPI,LLM,RAG,Prompt Engineering,Vector Database,Docker" \
+    --notes "Synthetic profile: 3 years Python engineer targeting Tokyo LLM/AI roles"
+done
+
+# 5) Score + tailor (stop here, before export/apply)
+tenki analyze --unscored --top-n 10
+tenki tailor --untailored --top-n 10
+
+# 6) Pre-application review
+tenki app list --json | jq '[.[] | {id: .id[0:8], company, position, score: .fitness_score, tailored_summary}]'
 ```
 
 Notes:
-- If you omit `--sources`, pipeline uses `preferences.sources`; if that is empty, it defaults to `linkedin`.
-- CLI flags still override preferences (for one-off searches).
+- This flow intentionally does not run `export` or actual application submission.
+- If you use `pipeline run` without `--sources`, it falls back to `preferences.sources`, then `linkedin`.
 
 ## Commands
 
