@@ -269,7 +269,6 @@ impl Database {
     }
 
     /// Update fitness score and notes for an application.
-    #[allow(dead_code)]
     pub async fn update_fitness(&self, id: &str, score: f64, notes: &str) -> Result<()> {
         let result = sqlx::query(
             "UPDATE applications SET fitness_score = ?1, fitness_notes = ?2, updated_at = \

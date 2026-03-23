@@ -1,3 +1,4 @@
+mod agent;
 mod app_config;
 mod cli;
 mod db;
@@ -117,6 +118,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 job_level,
                 is_remote,
                 source,
+                skills,
                 notes,
                 json,
             } => {
@@ -133,6 +135,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     .maybe_job_level(job_level_str.as_deref())
                     .maybe_is_remote(is_remote)
                     .maybe_source(source.as_deref())
+                    .maybe_skills(skills.as_deref())
                     .maybe_notes(notes.as_deref())
                     .build();
                 cli::app::update(&db, &id, status, outcome, stage, &params, json).await?;
@@ -251,8 +254,9 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
                 cli::stage::list(&db, &app_id, json).await?;
             }
         },
-        Command::Analyze { id } => {
-            eprintln!("analyze not yet implemented (app: {id})");
+        Command::Analyze { id, json, backend } => {
+            let full_id = db.resolve_app_id(&id).await?;
+            cli::analyze::run(&db, &full_id, json, backend.as_deref()).await?;
         }
         Command::Tailor { id } => {
             eprintln!("tailor not yet implemented (app: {id})");
@@ -318,6 +322,10 @@ fn set_config_field(cfg: &mut app_config::AppConfig, key: &str, value: &str) {
         "defaults.status" => cfg.defaults.status = value.to_string(),
         "defaults.source" => cfg.defaults.source = Some(value.to_string()),
         "display.date_format" => cfg.display.date_format = value.to_string(),
+        "agent.backend" => cfg.agent.backend = value.to_string(),
+        "agent.idle_timeout_secs" => {
+            cfg.agent.idle_timeout_secs = value.parse().unwrap_or(30);
+        }
         _ => eprintln!("warning: unknown config key: {key}"),
     }
 }
@@ -328,6 +336,8 @@ fn get_config_field(cfg: &app_config::AppConfig, key: &str) -> Option<String> {
         "defaults.status" => Some(cfg.defaults.status.clone()),
         "defaults.source" => cfg.defaults.source.clone(),
         "display.date_format" => Some(cfg.display.date_format.clone()),
+        "agent.backend" => Some(cfg.agent.backend.clone()),
+        "agent.idle_timeout_secs" => Some(cfg.agent.idle_timeout_secs.to_string()),
         _ => None,
     }
 }
@@ -343,6 +353,11 @@ fn config_as_map(cfg: &app_config::AppConfig) -> Vec<(String, String)> {
         (
             "display.date_format".to_string(),
             cfg.display.date_format.clone(),
+        ),
+        ("agent.backend".to_string(), cfg.agent.backend.clone()),
+        (
+            "agent.idle_timeout_secs".to_string(),
+            cfg.agent.idle_timeout_secs.to_string(),
         ),
     ]
 }
