@@ -6,7 +6,7 @@ use crate::{
     domain::ListApplicationParams,
     error::Result,
     extractor::{DiscoverParams, Extractor, opencli},
-    pipeline::{PipelineConfig, PipelineSummary},
+    pipeline::{ApplicationSummary, PipelineConfig, PipelineError, PipelineSummary},
 };
 
 /// Execute the full pipeline: discover → score → tailor → export.
@@ -20,6 +20,8 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         above_threshold: 0,
         tailored:        0,
         exported:        0,
+        applications:    Vec::new(),
+        errors:          Vec::new(),
     };
 
     // Step 1: Discover
@@ -56,8 +58,14 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
     eprintln!("[2/5] Scoring unscored applications...");
     let unscored = db.list_unscored().await?;
     for app in &unscored {
-        cli::analyze::run(db, &app.id, false, None).await?;
-        summary.scored += 1;
+        match cli::analyze::run(db, &app.id, false, None).await {
+            Ok(_) => summary.scored += 1,
+            Err(e) => summary.errors.push(PipelineError {
+                id:      app.id.clone(),
+                step:    "score".into(),
+                message: e.to_string(),
+            }),
+        }
     }
     eprintln!("  -> {} scored", summary.scored);
 
@@ -90,8 +98,14 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         eprintln!("[4/5] Tailoring top applications...");
         for app in &qualified {
             if app.tailored_summary.is_none() {
-                cli::tailor::run(db, &app.id, false, None).await?;
-                summary.tailored += 1;
+                match cli::tailor::run(db, &app.id, false, None).await {
+                    Ok(_) => summary.tailored += 1,
+                    Err(e) => summary.errors.push(PipelineError {
+                        id:      app.id.clone(),
+                        step:    "tailor".into(),
+                        message: e.to_string(),
+                    }),
+                }
             }
         }
         eprintln!("  -> {} tailored", summary.tailored);
@@ -104,13 +118,48 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         eprintln!("[5/5] Exporting resumes...");
         for app in &qualified {
             if app.tailored_summary.is_some() {
-                let fresh_app = db.get_application(&app.id).await?;
-                cli::resume_export::export_one(db, &fresh_app).await?;
-                summary.exported += 1;
-                eprintln!("  -> {} @ {} done", app.position, app.company);
+                match db.get_application(&app.id).await {
+                    Ok(fresh_app) => {
+                        match cli::resume_export::export_one(db, &fresh_app).await {
+                            Ok(_) => {
+                                summary.exported += 1;
+                                eprintln!("  -> {} @ {} done", app.position, app.company);
+                            }
+                            Err(e) => summary.errors.push(PipelineError {
+                                id:      app.id.clone(),
+                                step:    "export".into(),
+                                message: e.to_string(),
+                            }),
+                        }
+                    }
+                    Err(e) => summary.errors.push(PipelineError {
+                        id:      app.id.clone(),
+                        step:    "export".into(),
+                        message: e.to_string(),
+                    }),
+                }
             }
         }
         eprintln!("  -> {} exported", summary.exported);
+    }
+
+    // Build per-application summaries by re-fetching qualified apps from DB
+    for app in &qualified {
+        match db.get_application(&app.id).await {
+            Ok(fresh) => summary.applications.push(ApplicationSummary {
+                id:            fresh.id,
+                company:       fresh.company,
+                position:      fresh.position,
+                fitness_score: fresh.fitness_score,
+                tailored:      fresh.tailored_summary.is_some(),
+                has_pdf:       fresh.has_resume_pdf,
+            }),
+            Err(e) => summary.errors.push(PipelineError {
+                id:      app.id.clone(),
+                step:    "summary".into(),
+                message: e.to_string(),
+            }),
+        }
     }
 
     Ok(summary)
