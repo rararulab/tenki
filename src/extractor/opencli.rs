@@ -8,6 +8,9 @@ use tokio::process::Command;
 use super::{DiscoverParams, DiscoveredJob, Extractor};
 use crate::error::{self, Result, TenkiError};
 
+/// Default per-source discover limit when caller does not specify one.
+const DEFAULT_DISCOVER_LIMIT: u32 = 30;
+
 /// OpenCLI-based job extractor.
 pub struct OpenCliExtractor;
 
@@ -35,26 +38,8 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
     }
 
     let mut cmd = Command::new("opencli");
-    let query = normalize_query_for_source(source, &params.query);
-    cmd.arg(source)
-        .arg("search")
-        .arg(&query)
-        .arg("--format")
-        .arg("json");
-
-    if let Some(loc) = &params.location {
-        match source {
-            "linkedin" => {
-                cmd.arg("--location").arg(loc);
-            }
-            "boss" => {
-                cmd.arg("--city").arg(loc);
-            }
-            _ => unreachable!(),
-        }
-    }
-    if let Some(limit) = params.limit {
-        cmd.arg("--limit").arg(limit.to_string());
+    for arg in build_search_args(source, params) {
+        cmd.arg(arg);
     }
 
     let output = cmd.output().await.map_err(|e| {
@@ -81,6 +66,61 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
         .into_iter()
         .map(|raw| raw.into_discovered(source))
         .collect())
+}
+
+fn build_search_args(source: &str, params: &DiscoverParams) -> Vec<String> {
+    let mut args = vec![
+        source.to_string(),
+        "search".to_string(),
+        normalize_query_for_source(source, &params.query),
+        "--format".to_string(),
+        "json".to_string(),
+    ];
+
+    if let Some(loc) = &params.location {
+        let normalized_location = normalize_location_for_source(source, loc);
+        match source {
+            "linkedin" => {
+                args.push("--location".to_string());
+                args.push(normalized_location);
+            }
+            "boss" => {
+                args.push("--city".to_string());
+                args.push(normalized_location);
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    let limit = params.limit.unwrap_or(DEFAULT_DISCOVER_LIMIT);
+    args.push("--limit".to_string());
+    args.push(limit.to_string());
+
+    args
+}
+
+fn normalize_location_for_source(source: &str, location: &str) -> String {
+    let location = location.trim();
+    if source != "linkedin" {
+        return location.to_string();
+    }
+
+    if !location.is_ascii() {
+        return location.to_string();
+    }
+
+    let key = location
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect::<String>()
+        .to_ascii_lowercase();
+
+    match key.as_str() {
+        // OpenCLI/LinkedIn may resolve "shanghai" to Shanghai, Virginia.
+        // Use Chinese form to disambiguate to Shanghai, China.
+        "shanghai" => "上海".to_string(),
+        _ => location.to_string(),
+    }
 }
 
 fn normalize_query_for_source(source: &str, query: &str) -> String {
@@ -223,5 +263,40 @@ mod tests {
             normalize_query_for_source("linkedin", "python llm"),
             "python llm"
         );
+    }
+
+    #[test]
+    fn default_limit_is_applied_when_missing() {
+        let params = DiscoverParams::builder().query("rust".to_string()).build();
+        let args = build_search_args("linkedin", &params);
+
+        assert!(args.windows(2).any(|w| w == ["--limit", "30"]));
+    }
+
+    #[test]
+    fn explicit_limit_overrides_default() {
+        let params = DiscoverParams::builder()
+            .query("rust".to_string())
+            .limit(55)
+            .build();
+        let args = build_search_args("linkedin", &params);
+
+        assert!(args.windows(2).any(|w| w == ["--limit", "55"]));
+    }
+
+    #[test]
+    fn linkedin_location_shanghai_is_disambiguated() {
+        assert_eq!(normalize_location_for_source("linkedin", "shanghai"), "上海");
+        assert_eq!(normalize_location_for_source("linkedin", "  shanghai "), "上海");
+    }
+
+    #[test]
+    fn linkedin_location_unknown_ascii_is_preserved() {
+        assert_eq!(normalize_location_for_source("linkedin", "tokyo"), "tokyo");
+    }
+
+    #[test]
+    fn non_linkedin_location_is_preserved() {
+        assert_eq!(normalize_location_for_source("boss", "shanghai"), "shanghai");
     }
 }

@@ -6,7 +6,7 @@ use snafu::ResultExt as _;
 use crate::{
     db::Database,
     error::Result,
-    extractor::{DiscoverParams, Extractor, opencli::OpenCliExtractor},
+    extractor::{DiscoverParams, Extractor, opencli},
 };
 
 /// Discover result summary.
@@ -28,7 +28,6 @@ pub async fn run(
     limit: Option<u32>,
     json: bool,
 ) -> Result<()> {
-    let extractor = OpenCliExtractor;
     let params = DiscoverParams::builder()
         .query(query.to_string())
         .maybe_location(location.map(String::from))
@@ -36,9 +35,36 @@ pub async fn run(
         .build();
 
     let jobs = if let Some(src) = source {
-        crate::extractor::opencli::search_source(src, &params).await?
+        if !json {
+            eprintln!(
+                "[discover] calling opencli source={src} query={query:?} location={location:?} \
+                 limit={}",
+                limit.map_or_else(|| "default".to_string(), |v| v.to_string())
+            );
+        }
+        let found = opencli::search_source(src, &params).await?;
+        if !json {
+            eprintln!("[discover] source={src} returned {} jobs", found.len());
+        }
+        found
     } else {
-        extractor.discover(&params).await?
+        let extractor = opencli::OpenCliExtractor;
+        let mut all = Vec::new();
+        for src in extractor.sources() {
+            if !json {
+                eprintln!(
+                    "[discover] calling opencli source={src} query={query:?} location={location:?} \
+                     limit={}",
+                    limit.map_or_else(|| "default".to_string(), |v| v.to_string())
+                );
+            }
+            let found = opencli::search_source(src, &params).await?;
+            if !json {
+                eprintln!("[discover] source={src} returned {} jobs", found.len());
+            }
+            all.extend(found);
+        }
+        all
     };
 
     let discovered = jobs.len();

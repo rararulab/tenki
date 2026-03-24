@@ -77,6 +77,7 @@ tenki discover --source linkedin --query "backend engineer" --json
 ```
 
 Discovered jobs are imported as applications with status `discovered`. Duplicates (same `jd_url`) are skipped automatically.
+If `--limit` is omitted, tenki requests up to 30 jobs per source.
 
 ### Batch Score & Tailor
 

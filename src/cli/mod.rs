@@ -45,7 +45,7 @@ pub enum Command {
         /// Location filter
         #[arg(long)]
         location: Option<String>,
-        /// Maximum results per source
+        /// Maximum results per source (default: 30)
         #[arg(long)]
         limit:    Option<u32>,
         /// Output as JSON
