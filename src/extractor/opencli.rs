@@ -3,8 +3,10 @@
 
 use serde::Deserialize;
 use snafu::ResultExt as _;
-use tokio::process::Command;
-use tokio::time::{Duration, sleep};
+use tokio::{
+    process::Command,
+    time::{Duration, sleep},
+};
 
 use super::{DiscoverParams, DiscoveredJob, Extractor};
 use crate::error::{self, Result, TenkiError};
@@ -40,7 +42,11 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
     }
 
     let args = build_search_args(source, params);
-    let max_attempts = if source == "boss" { BOSS_RETRY_ATTEMPTS } else { 1 };
+    let max_attempts = if source == "boss" {
+        BOSS_RETRY_ATTEMPTS
+    } else {
+        1
+    };
     let mut last_error: Option<TenkiError> = None;
 
     for attempt in 1..=max_attempts {
@@ -126,7 +132,7 @@ fn is_transient_opencli_failure(message: &str) -> bool {
         || text.contains("timed out")
 }
 
-fn backoff_delay(attempt: usize) -> Duration {
+const fn backoff_delay(attempt: usize) -> Duration {
     match attempt {
         1 => Duration::from_millis(700),
         2 => Duration::from_millis(1400),
@@ -205,7 +211,7 @@ fn normalize_location_for_source(source: &str, location: &str) -> String {
 
     let key = location
         .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
+        .filter(char::is_ascii_alphanumeric)
         .collect::<String>()
         .to_ascii_lowercase();
 
@@ -243,18 +249,18 @@ fn normalize_query_for_source(source: &str, query: &str) -> String {
 #[derive(Debug, Deserialize)]
 struct RawOpenCliJob {
     #[serde(alias = "jobName", alias = "job_name", alias = "title", alias = "name")]
-    title:    Option<String>,
+    title:     Option<String>,
     #[serde(
         alias = "brandName",
         alias = "brand_name",
         alias = "companyName",
         alias = "company"
     )]
-    company:  Option<String>,
+    company:   Option<String>,
     #[serde(alias = "url", alias = "link")]
-    jd_url:   Option<String>,
+    jd_url:    Option<String>,
     #[serde(alias = "description", alias = "jd")]
-    jd_text:  Option<String>,
+    jd_text:   Option<String>,
     #[serde(
         alias = "cityName",
         alias = "city_name",
@@ -262,9 +268,9 @@ struct RawOpenCliJob {
         alias = "location",
         alias = "area"
     )]
-    location: Option<String>,
+    location:  Option<String>,
     #[serde(alias = "salaryDesc", alias = "salary_desc", alias = "salary")]
-    salary:   Option<String>,
+    salary:    Option<String>,
     #[serde(
         alias = "listed",
         alias = "posted_at",
@@ -426,8 +432,14 @@ mod tests {
 
     #[test]
     fn linkedin_location_chinese_input_is_disambiguated() {
-        assert_eq!(normalize_location_for_source("linkedin", "上海"), "Shanghai China");
-        assert_eq!(normalize_location_for_source("linkedin", "上海市"), "Shanghai China");
+        assert_eq!(
+            normalize_location_for_source("linkedin", "上海"),
+            "Shanghai China"
+        );
+        assert_eq!(
+            normalize_location_for_source("linkedin", "上海市"),
+            "Shanghai China"
+        );
     }
 
     #[test]
@@ -437,7 +449,10 @@ mod tests {
 
     #[test]
     fn non_linkedin_location_is_preserved() {
-        assert_eq!(normalize_location_for_source("boss", "shanghai"), "shanghai");
+        assert_eq!(
+            normalize_location_for_source("boss", "shanghai"),
+            "shanghai"
+        );
     }
 
     #[test]

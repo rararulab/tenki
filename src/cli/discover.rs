@@ -57,8 +57,8 @@ pub async fn run(
                 location.map(|loc| opencli::normalized_location_for_source(src, loc));
             if !json {
                 eprintln!(
-                    "[discover] calling opencli source={src} query={query:?} location={location:?} \
-                     normalized_location={normalized_location:?} limit={}",
+                    "[discover] calling opencli source={src} query={query:?} \
+                     location={location:?} normalized_location={normalized_location:?} limit={}",
                     limit.map_or_else(|| "default".to_string(), |v| v.to_string())
                 );
             }
