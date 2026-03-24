@@ -17,7 +17,7 @@ const APPLICATION_COLUMNS: &str =
     id, company, position, jd_url, jd_text, location, status, stage, outcome, fitness_score, \
      fitness_notes, resume_typ, (resume_pdf IS NOT NULL) AS has_resume_pdf, salary, salary_min, \
      salary_max, salary_currency, job_type, is_remote, job_level, skills, experience_range, \
-     source, company_url, notes, tailored_summary, tailored_headline, tailored_skills, \
+     source, company_url, notes, posted_at, tailored_summary, tailored_headline, tailored_skills, \
      applied_at, closed_at, created_at, updated_at";
 
 impl Database {
@@ -371,7 +371,8 @@ impl Database {
 
         sqlx::query(
             "INSERT INTO applications (id, company, position, jd_url, jd_text, location, salary, \
-             source, status, stage) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             source, status, stage, posted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, \
+             ?11)",
         )
         .bind(&id)
         .bind(&job.company)
@@ -383,6 +384,7 @@ impl Database {
         .bind(&job.source)
         .bind(status)
         .bind(stage)
+        .bind(&job.posted_at)
         .execute(self.pool())
         .await
         .context(error::SqlxSnafu)?;

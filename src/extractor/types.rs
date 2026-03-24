@@ -29,6 +29,8 @@ pub struct DiscoveredJob {
     pub location: Option<String>,
     /// Salary or compensation info.
     pub salary:   Option<String>,
+    /// Job posted/published time from source (e.g. "1 day ago").
+    pub posted_at: Option<String>,
     /// Source platform (e.g. "boss", "linkedin").
     pub source:   String,
 }

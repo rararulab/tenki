@@ -34,7 +34,7 @@ pub async fn list(db: &Database, params: &ListApplicationParams<'_>, json: bool)
         let mut table = Table::new();
         table.load_preset(UTF8_FULL);
         table.set_header([
-            "ID", "Company", "Position", "Status", "Stage", "Outcome", "Source", "Updated",
+            "ID", "Company", "Position", "Status", "Stage", "Outcome", "Source", "Posted",
         ]);
         for app in &apps {
             table.add_row([
@@ -45,7 +45,7 @@ pub async fn list(db: &Database, params: &ListApplicationParams<'_>, json: bool)
                 app.stage.as_deref().unwrap_or("—"),
                 app.outcome.as_deref().unwrap_or("—"),
                 app.source.as_deref().unwrap_or("—"),
-                &app.updated_at,
+                app.posted_at.as_deref().unwrap_or("—"),
             ]);
         }
         println!("{table}");
@@ -80,6 +80,7 @@ pub async fn show(db: &Database, id: &str, json: bool) -> Result<()> {
         );
         println!("Skills:     {}", app.skills.as_deref().unwrap_or("—"));
         println!("Source:     {}", app.source.as_deref().unwrap_or("—"));
+        println!("Posted At:  {}", app.posted_at.as_deref().unwrap_or("—"));
         println!("Company URL:{}", app.company_url.as_deref().unwrap_or("—"));
         println!("Notes:      {}", app.notes.as_deref().unwrap_or("—"));
         println!(

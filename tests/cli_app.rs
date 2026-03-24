@@ -3,6 +3,7 @@ use predicates::prelude::*;
 use tenki::{
     db::Database,
     domain::{AddApplicationParams, AppStatus, Stage},
+    extractor::DiscoveredJob,
 };
 
 #[test]
@@ -278,10 +279,11 @@ fn app_list_applies_pending_sqlx_migrations() {
                 .await
                 .expect("set stage");
 
-            sqlx::query("DELETE FROM _sqlx_migrations")
+            sqlx::query("DELETE FROM _sqlx_migrations WHERE description = ?1")
+                .bind("fix discovered stage")
                 .execute(db.pool())
                 .await
-                .expect("clear sqlx migration history");
+                .expect("clear stage-fix migration history");
         });
 
     let output = common::tenki_with(&tmp)
@@ -297,4 +299,37 @@ fn app_list_applies_pending_sqlx_migrations() {
         "expected stage to be cleared by SQLx migration, got {}",
         app["stage"]
     );
+}
+
+#[test]
+fn app_list_json_includes_job_posted_time() {
+    let tmp = common::tenki_initialized();
+    let db_path = tmp.path().join("tenki.db");
+
+    tokio::runtime::Runtime::new()
+        .expect("create tokio runtime")
+        .block_on(async {
+            let db = Database::open_at(&db_path).await.expect("open db");
+            let job = DiscoveredJob::builder()
+                .title("Rust Engineer".to_string())
+                .company("PostedAtCo".to_string())
+                .source("linkedin".to_string())
+                .posted_at("2026-03-20".to_string())
+                .build();
+            let imported = db
+                .import_discovered_job(&job)
+                .await
+                .expect("import discovered job");
+            assert!(imported.is_some());
+        });
+
+    let output = common::tenki_with(&tmp)
+        .args(["app", "list", "--company", "PostedAtCo", "--json"])
+        .output()
+        .expect("run");
+    assert!(output.status.success());
+
+    let apps: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
+    let app = &apps.as_array().expect("array")[0];
+    assert_eq!(app["posted_at"], "2026-03-20");
 }

@@ -35,10 +35,12 @@ pub async fn run(
         .build();
 
     let jobs = if let Some(src) = source {
+        let normalized_location =
+            location.map(|loc| opencli::normalized_location_for_source(src, loc));
         if !json {
             eprintln!(
                 "[discover] calling opencli source={src} query={query:?} location={location:?} \
-                 limit={}",
+                 normalized_location={normalized_location:?} limit={}",
                 limit.map_or_else(|| "default".to_string(), |v| v.to_string())
             );
         }
@@ -51,10 +53,12 @@ pub async fn run(
         let extractor = opencli::OpenCliExtractor;
         let mut all = Vec::new();
         for src in extractor.sources() {
+            let normalized_location =
+                location.map(|loc| opencli::normalized_location_for_source(src, loc));
             if !json {
                 eprintln!(
                     "[discover] calling opencli source={src} query={query:?} location={location:?} \
-                     limit={}",
+                     normalized_location={normalized_location:?} limit={}",
                     limit.map_or_else(|| "default".to_string(), |v| v.to_string())
                 );
             }

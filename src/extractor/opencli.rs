@@ -165,10 +165,38 @@ fn build_search_args(source: &str, params: &DiscoverParams) -> Vec<String> {
     args
 }
 
+/// Exported for CLI logging so users can see source-specific location rewrite.
+pub fn normalized_location_for_source(source: &str, location: &str) -> String {
+    normalize_location_for_source(source, location)
+}
+
 fn normalize_location_for_source(source: &str, location: &str) -> String {
     let location = location.trim();
     if source != "linkedin" {
         return location.to_string();
+    }
+
+    // For Chinese cities, explicitly add country to avoid LinkedIn resolving
+    // to similarly named US locations.
+    let han_key = location
+        .chars()
+        .filter(|c| !c.is_whitespace() && !matches!(*c, ',' | '，' | '-' | '·'))
+        .collect::<String>();
+    match han_key.as_str() {
+        "上海" | "上海市" => return "Shanghai China".to_string(),
+        "北京" | "北京市" => return "Beijing China".to_string(),
+        "深圳" | "深圳市" => return "Shenzhen China".to_string(),
+        "广州" | "广州市" => return "Guangzhou China".to_string(),
+        "杭州" | "杭州市" => return "Hangzhou China".to_string(),
+        "苏州" | "苏州市" => return "Suzhou China".to_string(),
+        "南京" | "南京市" => return "Nanjing China".to_string(),
+        "成都" | "成都市" => return "Chengdu China".to_string(),
+        "武汉" | "武汉市" => return "Wuhan China".to_string(),
+        "西安" | "西安市" => return "Xi'an China".to_string(),
+        "天津" | "天津市" => return "Tianjin China".to_string(),
+        "重庆" | "重庆市" => return "Chongqing China".to_string(),
+        "香港" => return "Hong Kong China".to_string(),
+        _ => {}
     }
 
     if !location.is_ascii() {
@@ -182,21 +210,19 @@ fn normalize_location_for_source(source: &str, location: &str) -> String {
         .to_ascii_lowercase();
 
     match key.as_str() {
-        // OpenCLI/LinkedIn may resolve common pinyin names to wrong regions
-        // (e.g. Shanghai, Virginia). Use Chinese names to disambiguate.
-        "shanghai" => "上海".to_string(),
-        "beijing" => "北京".to_string(),
-        "shenzhen" => "深圳".to_string(),
-        "guangzhou" => "广州".to_string(),
-        "hangzhou" => "杭州".to_string(),
-        "suzhou" => "苏州".to_string(),
-        "nanjing" => "南京".to_string(),
-        "chengdu" => "成都".to_string(),
-        "wuhan" => "武汉".to_string(),
-        "xian" => "西安".to_string(),
-        "tianjin" => "天津".to_string(),
-        "chongqing" => "重庆".to_string(),
-        "hongkong" => "香港".to_string(),
+        "shanghai" => "Shanghai China".to_string(),
+        "beijing" => "Beijing China".to_string(),
+        "shenzhen" => "Shenzhen China".to_string(),
+        "guangzhou" => "Guangzhou China".to_string(),
+        "hangzhou" => "Hangzhou China".to_string(),
+        "suzhou" => "Suzhou China".to_string(),
+        "nanjing" => "Nanjing China".to_string(),
+        "chengdu" => "Chengdu China".to_string(),
+        "wuhan" => "Wuhan China".to_string(),
+        "xian" => "Xi'an China".to_string(),
+        "tianjin" => "Tianjin China".to_string(),
+        "chongqing" => "Chongqing China".to_string(),
+        "hongkong" => "Hong Kong China".to_string(),
         _ => location.to_string(),
     }
 }
@@ -239,6 +265,15 @@ struct RawOpenCliJob {
     location: Option<String>,
     #[serde(alias = "salaryDesc", alias = "salary_desc", alias = "salary")]
     salary:   Option<String>,
+    #[serde(
+        alias = "listed",
+        alias = "posted_at",
+        alias = "postedAt",
+        alias = "publish_time",
+        alias = "publishedAt",
+        alias = "activeTime"
+    )]
+    posted_at: Option<String>,
 }
 
 impl RawOpenCliJob {
@@ -250,6 +285,7 @@ impl RawOpenCliJob {
             .maybe_jd_text(self.jd_text)
             .maybe_location(self.location)
             .maybe_salary(self.salary)
+            .maybe_posted_at(self.posted_at)
             .source(source.to_string())
             .build()
     }
@@ -288,7 +324,8 @@ mod tests {
                 "company": "Stripe",
                 "url": "https://linkedin.com/jobs/456",
                 "location": "Remote",
-                "salary": "$180-220K"
+                "salary": "$180-220K",
+                "listed": "1 day ago"
             }
         ]"#;
         let raw: Vec<RawOpenCliJob> = serde_json::from_str(json).unwrap();
@@ -302,6 +339,7 @@ mod tests {
         assert_eq!(jobs[0].company, "Stripe");
         assert_eq!(jobs[0].source, "linkedin");
         assert_eq!(jobs[0].location.as_deref(), Some("Remote"));
+        assert_eq!(jobs[0].posted_at.as_deref(), Some("1 day ago"));
         assert_eq!(
             jobs[0].jd_url.as_deref(),
             Some("https://linkedin.com/jobs/456")
@@ -364,11 +402,32 @@ mod tests {
 
     #[test]
     fn linkedin_location_common_cn_cities_are_disambiguated() {
-        assert_eq!(normalize_location_for_source("linkedin", "shanghai"), "上海");
-        assert_eq!(normalize_location_for_source("linkedin", "  shanghai "), "上海");
-        assert_eq!(normalize_location_for_source("linkedin", "beijing"), "北京");
-        assert_eq!(normalize_location_for_source("linkedin", "Xi'an"), "西安");
-        assert_eq!(normalize_location_for_source("linkedin", "hong kong"), "香港");
+        assert_eq!(
+            normalize_location_for_source("linkedin", "shanghai"),
+            "Shanghai China"
+        );
+        assert_eq!(
+            normalize_location_for_source("linkedin", "  shanghai "),
+            "Shanghai China"
+        );
+        assert_eq!(
+            normalize_location_for_source("linkedin", "beijing"),
+            "Beijing China"
+        );
+        assert_eq!(
+            normalize_location_for_source("linkedin", "Xi'an"),
+            "Xi'an China"
+        );
+        assert_eq!(
+            normalize_location_for_source("linkedin", "hong kong"),
+            "Hong Kong China"
+        );
+    }
+
+    #[test]
+    fn linkedin_location_chinese_input_is_disambiguated() {
+        assert_eq!(normalize_location_for_source("linkedin", "上海"), "Shanghai China");
+        assert_eq!(normalize_location_for_source("linkedin", "上海市"), "Shanghai China");
     }
 
     #[test]
