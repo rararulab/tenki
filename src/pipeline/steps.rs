@@ -118,19 +118,15 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         eprintln!("[5/5] Exporting resumes...");
         for app in &qualified {
             if app.tailored_summary.is_some() {
-                match db.get_application(&app.id).await {
-                    Ok(fresh_app) => {
-                        match cli::resume_export::export_one(db, &fresh_app).await {
-                            Ok(_) => {
-                                summary.exported += 1;
-                                eprintln!("  -> {} @ {} done", app.position, app.company);
-                            }
-                            Err(e) => summary.errors.push(PipelineError {
-                                id:      app.id.clone(),
-                                step:    "export".into(),
-                                message: e.to_string(),
-                            }),
-                        }
+                let result = async {
+                    let fresh_app = db.get_application(&app.id).await?;
+                    cli::resume_export::export_one(db, &fresh_app).await
+                }.await;
+
+                match result {
+                    Ok(()) => {
+                        summary.exported += 1;
+                        eprintln!("  -> {} @ {} done", app.position, app.company);
                     }
                     Err(e) => summary.errors.push(PipelineError {
                         id:      app.id.clone(),
@@ -162,5 +158,6 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         }
     }
 
+    summary.ok = summary.errors.is_empty();
     Ok(summary)
 }
