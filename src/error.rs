@@ -12,6 +12,9 @@ pub enum TenkiError {
     #[snafu(display("sqlx error: {source}"))]
     Sqlx { source: sqlx::Error },
 
+    #[snafu(display("sqlx migration error: {source}"))]
+    SqlxMigrate { source: sqlx::migrate::MigrateError },
+
     #[snafu(display("IO error: {source}"))]
     Io { source: std::io::Error },
 

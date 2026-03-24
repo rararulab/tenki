@@ -45,6 +45,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     if !matches!(cli.command, Command::Init) {
         db.ensure_initialized().await?;
+        db.migrate_sqlx().await?;
     }
 
     match cli.command {

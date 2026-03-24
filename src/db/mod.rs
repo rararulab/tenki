@@ -17,6 +17,8 @@ use crate::{
     store::{DBStore, DatabaseConfig},
 };
 
+static SQLX_MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
@@ -63,70 +65,17 @@ impl Database {
             .await
             .context(error::SqlxSnafu)?;
 
-        // Run migrations for existing databases
-        self.run_migrations().await?;
+        // Run SQLx-managed migrations
+        self.migrate_sqlx().await?;
         Ok(())
     }
 
-    /// Apply any pending migrations to bring existing databases up to date.
-    async fn run_migrations(&self) -> Result<()> {
-        // Ensure migrations table exists (already in schema.sql, but
-        // belt-and-suspenders)
-        sqlx::raw_sql(
-            "CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY, applied_at \
-             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-        )
-        .execute(self.pool())
-        .await
-        .context(error::SqlxSnafu)?;
-
-        // Check which migrations have been applied
-        let applied: Vec<(i64,)> =
-            sqlx::query_as("SELECT version FROM migrations ORDER BY version")
-                .fetch_all(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
-        let applied_set: std::collections::HashSet<i64> =
-            applied.into_iter().map(|r| r.0).collect();
-
-        // Migration v2: enriched fields + new tables
-        if !applied_set.contains(&2) {
-            let migration = include_str!("../migrations/v2.sql");
-            // Run each statement individually; ALTER TABLE fails if column exists, which is
-            // OK
-            for stmt in migration.split(';') {
-                let stmt = stmt.trim();
-                if stmt.is_empty() || stmt.starts_with("--") {
-                    continue;
-                }
-                // Ignore "duplicate column" errors from ALTER TABLE
-                let _ = sqlx::raw_sql(&format!("{stmt};"))
-                    .execute(self.pool())
-                    .await;
-            }
-            // Record migration
-            sqlx::query("INSERT OR IGNORE INTO migrations (version) VALUES (?1)")
-                .bind(2i64)
-                .execute(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
-        }
-
-        // Migration v3: clear incorrect default stage for discovered/bookmarked
-        if !applied_set.contains(&3) {
-            let migration = include_str!("../migrations/v3.sql");
-            sqlx::raw_sql(migration)
-                .execute(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
-
-            sqlx::query("INSERT OR IGNORE INTO migrations (version) VALUES (?1)")
-                .bind(3i64)
-                .execute(self.pool())
-                .await
-                .context(error::SqlxSnafu)?;
-        }
-
+    /// Apply SQLx-managed migrations from `./migrations`.
+    pub async fn migrate_sqlx(&self) -> Result<()> {
+        SQLX_MIGRATOR
+            .run(self.pool())
+            .await
+            .context(error::SqlxMigrateSnafu)?;
         Ok(())
     }
 

@@ -1,5 +1,9 @@
 mod common;
 use predicates::prelude::*;
+use tenki::{
+    db::Database,
+    domain::{AddApplicationParams, AppStatus, Stage},
+};
 
 #[test]
 fn init_creates_database() {
@@ -251,4 +255,46 @@ fn interview_add_rejects_invalid_date() {
         .assert()
         .failure()
         .stdout(predicate::str::contains("invalid date"));
+}
+
+#[test]
+fn app_list_applies_pending_sqlx_migrations() {
+    let tmp = common::tenki_initialized();
+    let db_path = tmp.path().join("tenki.db");
+
+    tokio::runtime::Runtime::new()
+        .expect("create tokio runtime")
+        .block_on(async {
+            let db = Database::open_at(&db_path).await.expect("open db");
+
+            let params = AddApplicationParams::builder()
+                .company("LegacyStageCo")
+                .position("Backend Engineer")
+                .status(AppStatus::Discovered)
+                .build();
+            let app_id = db.add_application(&params).await.expect("add app");
+
+            db.update_application_stage(&app_id, Stage::Applied, Some("legacy bad stage"))
+                .await
+                .expect("set stage");
+
+            sqlx::query("DELETE FROM _sqlx_migrations")
+                .execute(db.pool())
+                .await
+                .expect("clear sqlx migration history");
+        });
+
+    let output = common::tenki_with(&tmp)
+        .args(["app", "list", "--company", "LegacyStageCo", "--json"])
+        .output()
+        .expect("run");
+    assert!(output.status.success());
+
+    let apps: serde_json::Value = serde_json::from_slice(&output.stdout).expect("parse");
+    let app = &apps.as_array().expect("array")[0];
+    assert!(
+        app["stage"].is_null(),
+        "expected stage to be cleared by SQLx migration, got {}",
+        app["stage"]
+    );
 }
