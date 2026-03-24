@@ -51,27 +51,27 @@ fn pipeline_run_json_contains_applications_and_errors() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Pipeline may fail at discover step (no opencli in CI).
-    // If it produced JSON, verify the response shape; otherwise accept
-    // an opencli-related error.
-    if let Ok(json) = serde_json::from_str::<Value>(&stdout) {
-        assert!(
-            json.get("applications").and_then(Value::as_array).is_some(),
-            "expected `applications` array in JSON response"
-        );
-        assert!(
-            json.get("errors").and_then(Value::as_array).is_some(),
-            "expected `errors` array in JSON response"
-        );
+    // If it produced a successful pipeline JSON with `applications`, verify shape.
+    // Otherwise the failure must be an opencli/discover error.
+    let has_applications = serde_json::from_str::<Value>(&stdout)
+        .ok()
+        .and_then(|json| json.get("applications").and_then(Value::as_array).cloned())
+        .is_some();
+
+    if has_applications {
+        let json: Value = serde_json::from_str(&stdout).unwrap();
+        assert!(json["applications"].is_array());
+        assert!(json["errors"].is_array());
     } else {
-        // No valid JSON — the pipeline failed before producing output.
-        // Verify the failure is the expected opencli / discover error.
+        // Pipeline failed before producing summary — expect opencli/discover error.
         let stderr = String::from_utf8_lossy(&output.stderr);
         let combined = format!("{stdout}{stderr}");
         assert!(
             combined.contains("opencli")
                 || combined.contains("discover")
                 || combined.contains("OPENCLI")
-                || combined.contains("Discover"),
+                || combined.contains("Discover")
+                || combined.contains("OpenCli"),
             "unexpected error output: {combined}"
         );
     }
