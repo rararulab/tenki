@@ -182,9 +182,21 @@ fn normalize_location_for_source(source: &str, location: &str) -> String {
         .to_ascii_lowercase();
 
     match key.as_str() {
-        // OpenCLI/LinkedIn may resolve "shanghai" to Shanghai, Virginia.
-        // Use Chinese form to disambiguate to Shanghai, China.
+        // OpenCLI/LinkedIn may resolve common pinyin names to wrong regions
+        // (e.g. Shanghai, Virginia). Use Chinese names to disambiguate.
         "shanghai" => "上海".to_string(),
+        "beijing" => "北京".to_string(),
+        "shenzhen" => "深圳".to_string(),
+        "guangzhou" => "广州".to_string(),
+        "hangzhou" => "杭州".to_string(),
+        "suzhou" => "苏州".to_string(),
+        "nanjing" => "南京".to_string(),
+        "chengdu" => "成都".to_string(),
+        "wuhan" => "武汉".to_string(),
+        "xian" => "西安".to_string(),
+        "tianjin" => "天津".to_string(),
+        "chongqing" => "重庆".to_string(),
+        "hongkong" => "香港".to_string(),
         _ => location.to_string(),
     }
 }
@@ -351,9 +363,12 @@ mod tests {
     }
 
     #[test]
-    fn linkedin_location_shanghai_is_disambiguated() {
+    fn linkedin_location_common_cn_cities_are_disambiguated() {
         assert_eq!(normalize_location_for_source("linkedin", "shanghai"), "上海");
         assert_eq!(normalize_location_for_source("linkedin", "  shanghai "), "上海");
+        assert_eq!(normalize_location_for_source("linkedin", "beijing"), "北京");
+        assert_eq!(normalize_location_for_source("linkedin", "Xi'an"), "西安");
+        assert_eq!(normalize_location_for_source("linkedin", "hong kong"), "香港");
     }
 
     #[test]
