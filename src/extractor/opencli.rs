@@ -4,12 +4,14 @@
 use serde::Deserialize;
 use snafu::ResultExt as _;
 use tokio::process::Command;
+use tokio::time::{Duration, sleep};
 
 use super::{DiscoverParams, DiscoveredJob, Extractor};
 use crate::error::{self, Result, TenkiError};
 
 /// Default per-source discover limit when caller does not specify one.
 const DEFAULT_DISCOVER_LIMIT: u32 = 30;
+const BOSS_RETRY_ATTEMPTS: usize = 3;
 
 /// OpenCLI-based job extractor.
 pub struct OpenCliExtractor;
@@ -37,8 +39,69 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
         });
     }
 
+    let args = build_search_args(source, params);
+    let max_attempts = if source == "boss" { BOSS_RETRY_ATTEMPTS } else { 1 };
+    let mut last_error: Option<TenkiError> = None;
+
+    for attempt in 1..=max_attempts {
+        match run_opencli_once(&args).await {
+            Ok(output) => {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let raw_jobs: Vec<RawOpenCliJob> =
+                        serde_json::from_str(&stdout).context(error::JsonSnafu)?;
+
+                    return Ok(raw_jobs
+                        .into_iter()
+                        .map(|raw| raw.into_discovered(source))
+                        .collect());
+                }
+
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                let err = TenkiError::OpencliExecution {
+                    message: format!("exit {}: {stderr}", output.status),
+                };
+
+                if source == "boss"
+                    && attempt < max_attempts
+                    && is_transient_opencli_failure(&stderr)
+                {
+                    eprintln!(
+                        "[discover] boss transient error on attempt {attempt}/{max_attempts}, \
+                         retrying..."
+                    );
+                    sleep(backoff_delay(attempt)).await;
+                    continue;
+                }
+
+                return Err(err);
+            }
+            Err(err) => {
+                if source == "boss"
+                    && attempt < max_attempts
+                    && is_transient_opencli_failure(&err.to_string())
+                {
+                    eprintln!(
+                        "[discover] boss transient failure on attempt {attempt}/{max_attempts}, \
+                         retrying..."
+                    );
+                    last_error = Some(err);
+                    sleep(backoff_delay(attempt)).await;
+                    continue;
+                }
+                return Err(err);
+            }
+        }
+    }
+
+    Err(last_error.unwrap_or_else(|| TenkiError::OpencliExecution {
+        message: "boss search failed without detailed error".to_string(),
+    }))
+}
+
+async fn run_opencli_once(args: &[String]) -> Result<std::process::Output> {
     let mut cmd = Command::new("opencli");
-    for arg in build_search_args(source, params) {
+    for arg in args {
         cmd.arg(arg);
     }
 
@@ -51,21 +114,24 @@ pub async fn search_source(source: &str, params: &DiscoverParams) -> Result<Vec<
             }
         }
     })?;
+    Ok(output)
+}
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(TenkiError::OpencliExecution {
-            message: format!("exit {}: {stderr}", output.status),
-        });
+fn is_transient_opencli_failure(message: &str) -> bool {
+    let text = message.to_ascii_lowercase();
+    text.contains("network error")
+        || text.contains("inspected target navigated or closed")
+        || text.contains("target closed")
+        || text.contains("navigation failed")
+        || text.contains("timed out")
+}
+
+fn backoff_delay(attempt: usize) -> Duration {
+    match attempt {
+        1 => Duration::from_millis(700),
+        2 => Duration::from_millis(1400),
+        _ => Duration::from_millis(2200),
     }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let raw_jobs: Vec<RawOpenCliJob> = serde_json::from_str(&stdout).context(error::JsonSnafu)?;
-
-    Ok(raw_jobs
-        .into_iter()
-        .map(|raw| raw.into_discovered(source))
-        .collect())
 }
 
 fn build_search_args(source: &str, params: &DiscoverParams) -> Vec<String> {
@@ -298,5 +364,14 @@ mod tests {
     #[test]
     fn non_linkedin_location_is_preserved() {
         assert_eq!(normalize_location_for_source("boss", "shanghai"), "shanghai");
+    }
+
+    #[test]
+    fn transient_failure_detection_matches_known_boss_errors() {
+        assert!(is_transient_opencli_failure("Error: Network Error"));
+        assert!(is_transient_opencli_failure(
+            "Inspected target navigated or closed"
+        ));
+        assert!(!is_transient_opencli_failure("unsupported source"));
     }
 }
