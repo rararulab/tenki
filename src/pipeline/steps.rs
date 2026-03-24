@@ -24,7 +24,23 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         errors:          Vec::new(),
     };
 
-    // Step 1: Discover
+    step_discover(db, config, &mut summary).await?;
+    step_score(db, &mut summary).await?;
+    let qualified = step_filter(db, config, &mut summary).await?;
+    step_tailor(db, config, &qualified, &mut summary).await;
+    step_export(db, config, &qualified, &mut summary).await;
+    build_application_summaries(db, &qualified, &mut summary).await;
+
+    summary.ok = summary.errors.is_empty();
+    Ok(summary)
+}
+
+/// Step 1: Discover jobs from external sources.
+async fn step_discover(
+    db: &Database,
+    config: &PipelineConfig,
+    summary: &mut PipelineSummary,
+) -> Result<()> {
     eprintln!("[1/5] Discovering jobs...");
     let extractor = opencli::OpenCliExtractor;
     let params = DiscoverParams::builder()
@@ -53,13 +69,16 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         "  -> {} found, {} new",
         summary.discovered, summary.imported
     );
+    Ok(())
+}
 
-    // Step 2: Score all unscored
+/// Step 2: Score all unscored applications.
+async fn step_score(db: &Database, summary: &mut PipelineSummary) -> Result<()> {
     eprintln!("[2/5] Scoring unscored applications...");
     let unscored = db.list_unscored().await?;
     for app in &unscored {
         match cli::analyze::run(db, &app.id, false, None).await {
-            Ok(_) => summary.scored += 1,
+            Ok(()) => summary.scored += 1,
             Err(e) => summary.errors.push(PipelineError {
                 id:      app.id.clone(),
                 step:    "score".into(),
@@ -68,8 +87,15 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         }
     }
     eprintln!("  -> {} scored", summary.scored);
+    Ok(())
+}
 
-    // Step 3: Filter by min_score, take top_n
+/// Step 3: Filter by `min_score`, take `top_n`.
+async fn step_filter(
+    db: &Database,
+    config: &PipelineConfig,
+    summary: &mut PipelineSummary,
+) -> Result<Vec<crate::domain::Application>> {
     eprintln!(
         "[3/5] Filtering (min_score={}, top_n={})...",
         config.min_score, config.top_n
@@ -90,16 +116,24 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
     qualified.truncate(config.top_n as usize);
     summary.above_threshold = qualified.len();
     eprintln!("  -> {} above threshold", summary.above_threshold);
+    Ok(qualified)
+}
 
-    // Step 4: Tailor
+/// Step 4: Tailor qualified applications.
+async fn step_tailor(
+    db: &Database,
+    config: &PipelineConfig,
+    qualified: &[crate::domain::Application],
+    summary: &mut PipelineSummary,
+) {
     if config.skip_tailor {
         eprintln!("[4/5] Tailoring skipped");
     } else {
         eprintln!("[4/5] Tailoring top applications...");
-        for app in &qualified {
+        for app in qualified {
             if app.tailored_summary.is_none() {
                 match cli::tailor::run(db, &app.id, false, None).await {
-                    Ok(_) => summary.tailored += 1,
+                    Ok(()) => summary.tailored += 1,
                     Err(e) => summary.errors.push(PipelineError {
                         id:      app.id.clone(),
                         step:    "tailor".into(),
@@ -110,18 +144,26 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         }
         eprintln!("  -> {} tailored", summary.tailored);
     }
+}
 
-    // Step 5: Export tailored resumes as PDFs
+/// Step 5: Export tailored resumes as PDFs.
+async fn step_export(
+    db: &Database,
+    config: &PipelineConfig,
+    qualified: &[crate::domain::Application],
+    summary: &mut PipelineSummary,
+) {
     if config.skip_export {
         eprintln!("[5/5] Export skipped");
     } else {
         eprintln!("[5/5] Exporting resumes...");
-        for app in &qualified {
+        for app in qualified {
             if app.tailored_summary.is_some() {
                 let result = async {
                     let fresh_app = db.get_application(&app.id).await?;
                     cli::resume_export::export_one(db, &fresh_app).await
-                }.await;
+                }
+                .await;
 
                 match result {
                     Ok(()) => {
@@ -138,9 +180,15 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         }
         eprintln!("  -> {} exported", summary.exported);
     }
+}
 
-    // Build per-application summaries by re-fetching qualified apps from DB
-    for app in &qualified {
+/// Build per-application summaries by re-fetching qualified apps from DB.
+async fn build_application_summaries(
+    db: &Database,
+    qualified: &[crate::domain::Application],
+    summary: &mut PipelineSummary,
+) {
+    for app in qualified {
         match db.get_application(&app.id).await {
             Ok(fresh) => summary.applications.push(ApplicationSummary {
                 id:            fresh.id,
@@ -157,7 +205,4 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
             }),
         }
     }
-
-    summary.ok = summary.errors.is_empty();
-    Ok(summary)
 }

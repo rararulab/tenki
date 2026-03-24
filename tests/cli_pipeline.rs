@@ -38,10 +38,13 @@ fn pipeline_run_json_contains_applications_and_errors() {
     let tmp = common::tenki_initialized();
     let output = common::tenki_with(&tmp)
         .args([
-            "pipeline", "run",
+            "pipeline",
+            "run",
             "--json",
-            "--query", "rust developer",
-            "--sources", "linkedin",
+            "--query",
+            "rust developer",
+            "--sources",
+            "linkedin",
             "--skip-tailor",
             "--skip-export",
         ])

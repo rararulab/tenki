@@ -18,19 +18,19 @@ pub struct DiscoverParams {
 #[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 pub struct DiscoveredJob {
     /// Job title.
-    pub title:    String,
+    pub title:     String,
     /// Company name.
-    pub company:  String,
+    pub company:   String,
     /// URL to the job description page.
-    pub jd_url:   Option<String>,
+    pub jd_url:    Option<String>,
     /// Raw job description text.
-    pub jd_text:  Option<String>,
+    pub jd_text:   Option<String>,
     /// Job location.
-    pub location: Option<String>,
+    pub location:  Option<String>,
     /// Salary or compensation info.
-    pub salary:   Option<String>,
+    pub salary:    Option<String>,
     /// Job posted/published time from source (e.g. "1 day ago").
     pub posted_at: Option<String>,
     /// Source platform (e.g. "boss", "linkedin").
-    pub source:   String,
+    pub source:    String,
 }

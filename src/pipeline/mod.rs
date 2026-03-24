@@ -46,7 +46,8 @@ pub struct ApplicationSummary {
 pub struct PipelineError {
     /// Application ID that caused the error.
     pub id:      String,
-    /// Pipeline step where the error occurred (e.g. "score", "tailor", "export").
+    /// Pipeline step where the error occurred (e.g. "score", "tailor",
+    /// "export").
     pub step:    String,
     /// Human-readable error message.
     pub message: String,
