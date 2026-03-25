@@ -17,17 +17,15 @@ fn export_without_flags_prints_usage_hint() {
 #[test]
 fn export_typ_no_resume_stored() {
     let tmp = common::tenki_initialized();
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "Acme",
-            "--position",
-            "SRE",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "Acme",
+        "--position",
+        "SRE",
+        "--json",
+    ]));
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Export typ when no resume is stored — should succeed but print message
@@ -41,17 +39,15 @@ fn export_typ_no_resume_stored() {
 #[test]
 fn export_pdf_no_resume_stored() {
     let tmp = common::tenki_initialized();
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "Acme",
-            "--position",
-            "SRE",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "Acme",
+        "--position",
+        "SRE",
+        "--json",
+    ]));
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Export pdf when no resume is stored — should succeed but print message
@@ -65,17 +61,15 @@ fn export_pdf_no_resume_stored() {
 #[test]
 fn export_typ_after_import() {
     let tmp = common::tenki_initialized();
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "Acme",
-            "--position",
-            "SRE",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "Acme",
+        "--position",
+        "SRE",
+        "--json",
+    ]));
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Create a temporary typ file and import it

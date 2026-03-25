@@ -7,18 +7,16 @@ fn task_add_returns_json_with_id() {
     let app_id = common::add_test_app(&tmp);
 
     // Add task and verify JSON contains id
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "task",
-            "add",
-            "--app-id",
-            &app_id,
-            "--type",
-            "todo",
-            "Send thank-you email",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "task",
+        "add",
+        "--app-id",
+        &app_id,
+        "--type",
+        "todo",
+        "Send thank-you email",
+        "--json",
+    ]));
     assert!(v.get("id").is_some(), "response should contain 'id'");
 }
 
@@ -28,18 +26,16 @@ fn task_lifecycle() {
     let app_id = common::add_test_app(&tmp);
 
     // Add task
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "task",
-            "add",
-            "--app-id",
-            &app_id,
-            "--type",
-            "prep",
-            "Review system design",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "task",
+        "add",
+        "--app-id",
+        &app_id,
+        "--type",
+        "prep",
+        "Review system design",
+        "--json",
+    ]));
     let tid = &v["id"].as_str().expect("id")[..8];
 
     // List
@@ -68,18 +64,16 @@ fn task_update_reflected_in_list() {
     let app_id = common::add_test_app(&tmp);
 
     // Add task
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "task",
-            "add",
-            "--app-id",
-            &app_id,
-            "--type",
-            "todo",
-            "Original title",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "task",
+        "add",
+        "--app-id",
+        &app_id,
+        "--type",
+        "todo",
+        "Original title",
+        "--json",
+    ]));
     let tid = &v["id"].as_str().expect("id")[..8];
 
     // Update title and add notes
@@ -111,20 +105,18 @@ fn task_add_with_due_date() {
     let app_id = common::add_test_app(&tmp);
 
     // Add task with due date
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "task",
-            "add",
-            "--app-id",
-            &app_id,
-            "--type",
-            "follow-up",
-            "--due-date",
-            "2026-04-01",
-            "Follow up with recruiter",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "task",
+        "add",
+        "--app-id",
+        &app_id,
+        "--type",
+        "follow-up",
+        "--due-date",
+        "2026-04-01",
+        "Follow up with recruiter",
+        "--json",
+    ]));
     assert!(v.get("id").is_some(), "response should contain 'id'");
 
     // Verify due date and title appear in list
@@ -142,18 +134,16 @@ fn task_done_reflected_in_list() {
     let app_id = common::add_test_app(&tmp);
 
     // Add task
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "task",
-            "add",
-            "--app-id",
-            &app_id,
-            "--type",
-            "prep",
-            "Practice coding",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "task",
+        "add",
+        "--app-id",
+        &app_id,
+        "--type",
+        "prep",
+        "Practice coding",
+        "--json",
+    ]));
     let tid = &v["id"].as_str().expect("id")[..8];
 
     // Mark done

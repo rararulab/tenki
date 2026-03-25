@@ -50,8 +50,14 @@ pub fn run_json(cmd: &mut Command) -> serde_json::Value {
 
 /// Add a test application and return its 8-char ID prefix.
 pub fn add_test_app(tmp: &TempDir) -> String {
-    let v = run_json(
-        tenki_with(tmp).args(["app", "add", "--company", "X", "--position", "Y", "--json"]),
-    );
+    let v = run_json(tenki_with(tmp).args([
+        "app",
+        "add",
+        "--company",
+        "X",
+        "--position",
+        "Y",
+        "--json",
+    ]));
     v["id"].as_str().expect("id field")[..8].to_string()
 }

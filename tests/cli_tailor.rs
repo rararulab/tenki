@@ -10,19 +10,17 @@ fn tailor_keyword_fallback() {
     let tmp = tenki_initialized();
 
     // Add an application with JD text
-    let add_json = common::run_json(
-        tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "Acme Corp",
-            "--position",
-            "Rust Developer",
-            "--jd-text",
-            "We need experience in Rust, Python, Docker, and Kubernetes for backend services",
-            "--json",
-        ]),
-    );
+    let add_json = common::run_json(tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "Acme Corp",
+        "--position",
+        "Rust Developer",
+        "--jd-text",
+        "We need experience in Rust, Python, Docker, and Kubernetes for backend services",
+        "--json",
+    ]));
     let short_id = &add_json["id"].as_str().expect("id field")[..8];
 
     // Update with skills
@@ -70,17 +68,15 @@ fn tailor_missing_jd_error() {
     let tmp = tenki_initialized();
 
     // Add an application without JD text
-    let add_json = common::run_json(
-        tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "NoJD Inc",
-            "--position",
-            "Engineer",
-            "--json",
-        ]),
-    );
+    let add_json = common::run_json(tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "NoJD Inc",
+        "--position",
+        "Engineer",
+        "--json",
+    ]));
     let short_id = &add_json["id"].as_str().expect("id field")[..8];
 
     // Tailor should fail with missing JD error

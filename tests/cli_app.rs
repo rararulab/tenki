@@ -56,9 +56,13 @@ fn app_add_default_bookmarked_has_null_stage() {
         .assert()
         .success();
 
-    let apps = common::run_json(
-        common::tenki_with(&tmp).args(["app", "list", "--company", "NullStageCo", "--json"]),
-    );
+    let apps = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "list",
+        "--company",
+        "NullStageCo",
+        "--json",
+    ]));
     let app = &apps.as_array().expect("array")[0];
     assert_eq!(app["status"], "bookmarked");
     assert!(app["stage"].is_null());
@@ -82,9 +86,13 @@ fn app_add_applied_status_sets_applied_stage() {
         .assert()
         .success();
 
-    let apps = common::run_json(
-        common::tenki_with(&tmp).args(["app", "list", "--company", "AppliedStageCo", "--json"]),
-    );
+    let apps = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "list",
+        "--company",
+        "AppliedStageCo",
+        "--json",
+    ]));
     let app = &apps.as_array().expect("array")[0];
     assert_eq!(app["status"], "applied");
     assert_eq!(app["stage"], "applied");
@@ -108,15 +116,13 @@ fn app_add_discovered_status_has_null_stage() {
         .assert()
         .success();
 
-    let apps = common::run_json(
-        common::tenki_with(&tmp).args([
-            "app",
-            "list",
-            "--company",
-            "DiscoveredStageCo",
-            "--json",
-        ]),
-    );
+    let apps = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "list",
+        "--company",
+        "DiscoveredStageCo",
+        "--json",
+    ]));
     let app = &apps.as_array().expect("array")[0];
     assert_eq!(app["status"], "discovered");
     assert!(app["stage"].is_null());
@@ -126,17 +132,15 @@ fn app_add_discovered_status_has_null_stage() {
 fn app_show_update_delete() {
     let tmp = common::tenki_initialized();
     // Add
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "app",
-            "add",
-            "--company",
-            "TestCo",
-            "--position",
-            "Dev",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "add",
+        "--company",
+        "TestCo",
+        "--position",
+        "Dev",
+        "--json",
+    ]));
     let id = v["id"].as_str().expect("id");
     let short = &id[..8];
 
@@ -279,9 +283,13 @@ fn app_list_applies_pending_sqlx_migrations() {
                 .expect("clear stage-fix migration history");
         });
 
-    let apps = common::run_json(
-        common::tenki_with(&tmp).args(["app", "list", "--company", "LegacyStageCo", "--json"]),
-    );
+    let apps = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "list",
+        "--company",
+        "LegacyStageCo",
+        "--json",
+    ]));
     let app = &apps.as_array().expect("array")[0];
     assert!(
         app["stage"].is_null(),
@@ -312,9 +320,13 @@ fn app_list_json_includes_job_posted_time() {
             assert!(imported.is_some());
         });
 
-    let apps = common::run_json(
-        common::tenki_with(&tmp).args(["app", "list", "--company", "PostedAtCo", "--json"]),
-    );
+    let apps = common::run_json(common::tenki_with(&tmp).args([
+        "app",
+        "list",
+        "--company",
+        "PostedAtCo",
+        "--json",
+    ]));
     let app = &apps.as_array().expect("array")[0];
     assert_eq!(app["posted_at"], "2026-03-20");
 }

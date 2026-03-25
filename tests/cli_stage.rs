@@ -100,9 +100,7 @@ fn stage_list_shows_full_history() {
         .success();
 
     // List should contain all stages
-    let v = common::run_json(
-        common::tenki_with(&tmp).args(["stage", "list", &app_id, "--json"]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args(["stage", "list", &app_id, "--json"]));
     let stdout = v.to_string();
     assert!(stdout.contains("applied"), "should contain applied");
     assert!(

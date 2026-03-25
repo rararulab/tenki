@@ -7,19 +7,17 @@ fn interview_lifecycle() {
     let app_id = common::add_test_app(&tmp);
 
     // Add interview
-    let v = common::run_json(
-        common::tenki_with(&tmp).args([
-            "interview",
-            "add",
-            "--app-id",
-            &app_id,
-            "--round",
-            "1",
-            "--type",
-            "technical",
-            "--json",
-        ]),
-    );
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "interview",
+        "add",
+        "--app-id",
+        &app_id,
+        "--round",
+        "1",
+        "--type",
+        "technical",
+        "--json",
+    ]));
     let iid = &v["id"].as_str().expect("id")[..8];
 
     // Update
