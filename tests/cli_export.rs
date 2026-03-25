@@ -4,16 +4,11 @@ use predicates::prelude::*;
 #[test]
 fn export_without_flags_prints_usage_hint() {
     let tmp = common::tenki_initialized();
-    let out = common::tenki_with(&tmp)
-        .args(["app", "add", "--company", "X", "--position", "Y", "--json"])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
-    let app_id = &v["id"].as_str().expect("id")[..8];
+    let app_id = common::add_test_app(&tmp);
 
     // Export without --typ or --pdf should hint to specify a format
     common::tenki_with(&tmp)
-        .args(["export", app_id])
+        .args(["export", &app_id])
         .assert()
         .success()
         .stderr(predicate::str::contains("--typ").or(predicate::str::contains("--pdf")));
@@ -22,8 +17,8 @@ fn export_without_flags_prints_usage_hint() {
 #[test]
 fn export_typ_no_resume_stored() {
     let tmp = common::tenki_initialized();
-    let out = common::tenki_with(&tmp)
-        .args([
+    let v = common::run_json(
+        common::tenki_with(&tmp).args([
             "app",
             "add",
             "--company",
@@ -31,10 +26,8 @@ fn export_typ_no_resume_stored() {
             "--position",
             "SRE",
             "--json",
-        ])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+        ]),
+    );
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Export typ when no resume is stored — should succeed but print message
@@ -48,8 +41,8 @@ fn export_typ_no_resume_stored() {
 #[test]
 fn export_pdf_no_resume_stored() {
     let tmp = common::tenki_initialized();
-    let out = common::tenki_with(&tmp)
-        .args([
+    let v = common::run_json(
+        common::tenki_with(&tmp).args([
             "app",
             "add",
             "--company",
@@ -57,10 +50,8 @@ fn export_pdf_no_resume_stored() {
             "--position",
             "SRE",
             "--json",
-        ])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+        ]),
+    );
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Export pdf when no resume is stored — should succeed but print message
@@ -74,8 +65,8 @@ fn export_pdf_no_resume_stored() {
 #[test]
 fn export_typ_after_import() {
     let tmp = common::tenki_initialized();
-    let out = common::tenki_with(&tmp)
-        .args([
+    let v = common::run_json(
+        common::tenki_with(&tmp).args([
             "app",
             "add",
             "--company",
@@ -83,10 +74,8 @@ fn export_typ_after_import() {
             "--position",
             "SRE",
             "--json",
-        ])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+        ]),
+    );
     let app_id = &v["id"].as_str().expect("id")[..8];
 
     // Create a temporary typ file and import it
