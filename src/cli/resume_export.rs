@@ -127,7 +127,8 @@ Edit the resume source files to match this job. Keep formatting intact. Be conci
     Ok(())
 }
 
-/// Check whether the resume repo has uncommitted changes (i.e. the agent edited files).
+/// Check whether the resume repo has uncommitted changes (i.e. the agent edited
+/// files).
 fn has_git_changes(repo: &Path) -> bool {
     std::process::Command::new("git")
         .args(["diff", "--stat"])
