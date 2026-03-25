@@ -24,7 +24,15 @@ pub async fn run_pipeline(db: &Database, config: &PipelineConfig) -> Result<Pipe
         errors:          Vec::new(),
     };
 
-    step_discover(db, config, &mut summary).await?;
+    // Discover is non-fatal: if opencli times out, continue with existing DB data
+    if let Err(e) = step_discover(db, config, &mut summary).await {
+        eprintln!("  ⚠ discover failed: {e} — continuing with existing data");
+        summary.errors.push(PipelineError {
+            id:      String::new(),
+            step:    "discover".into(),
+            message: e.to_string(),
+        });
+    }
     step_score(db, &mut summary).await?;
     let qualified = step_filter(db, config, &mut summary).await?;
     step_tailor(db, config, &qualified, &mut summary).await;

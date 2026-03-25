@@ -10,7 +10,9 @@
 pub mod backend;
 pub mod config;
 pub mod executor;
+pub mod output;
 
 pub use backend::CliBackend;
 pub use config::AgentConfig;
 pub use executor::CliExecutor;
+pub use output::{extract_fenced_json, extract_result_from_stream_json};
