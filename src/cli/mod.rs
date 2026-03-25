@@ -1,6 +1,7 @@
 pub mod analyze;
 pub mod app;
 pub mod discover;
+pub mod doctor;
 pub mod export;
 pub mod interview;
 pub mod pipeline;
@@ -146,6 +147,13 @@ pub enum Command {
     /// Run the automation pipeline (discover -> score -> tailor -> export)
     #[command(subcommand)]
     Pipeline(PipelineCommand),
+
+    /// Check critical configuration and dependencies
+    Doctor {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Manage configuration values
     Config {
