@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 
 use crate::{
-    agent::{CliBackend, CliExecutor},
+    agent::{self, CliBackend, CliExecutor},
     app_config,
     db::Database,
     error::{Result, TenkiError},
@@ -219,11 +219,16 @@ async fn try_agent_tailoring(
     ))
 }
 
-/// Parse JSON from agent output, handling markdown fences and prefix text.
+/// Parse JSON from agent output, handling stream-json NDJSON, markdown fences,
+/// and prefix text.
 fn parse_json_from_output(
     output: &str,
 ) -> std::result::Result<TailoringResponse, Box<dyn std::error::Error>> {
-    let trimmed = output.trim();
+    // When the backend emits stream-json (NDJSON), extract the result text first
+    // so that system/hook event lines don't confuse downstream parsing.
+    let effective =
+        agent::extract_result_from_stream_json(output).unwrap_or_else(|| output.to_string());
+    let trimmed = effective.trim();
 
     // Try direct parse first
     if let Ok(v) = serde_json::from_str::<TailoringResponse>(trimmed) {
@@ -231,7 +236,7 @@ fn parse_json_from_output(
     }
 
     // Try extracting from markdown fences
-    if let Some(json_str) = extract_fenced_json(trimmed)
+    if let Some(json_str) = agent::extract_fenced_json(trimmed)
         && let Ok(v) = serde_json::from_str::<TailoringResponse>(json_str)
     {
         return Ok(v);
@@ -252,20 +257,6 @@ fn parse_json_from_output(
         &trimmed[..trimmed.len().min(200)]
     )
     .into())
-}
-
-/// Extract JSON content from markdown code fences.
-fn extract_fenced_json(text: &str) -> Option<&str> {
-    let start_markers = ["```json\n", "```json\r\n", "```\n", "```\r\n"];
-    for marker in &start_markers {
-        if let Some(start) = text.find(marker) {
-            let json_start = start + marker.len();
-            if let Some(end) = text[json_start..].find("```") {
-                return Some(text[json_start..json_start + end].trim());
-            }
-        }
-    }
-    None
 }
 
 /// Keyword-based tailoring fallback when the agent is unavailable.
@@ -383,6 +374,17 @@ mod tests {
         assert_eq!(result.headline, "Rust Developer | FooCorp");
         assert!(result.skills.is_empty());
         assert!(result.summary.contains("FooCorp"));
+    }
+
+    #[test]
+    fn test_parse_stream_json_with_hook_events() {
+        let input = r#"{"type":"system","subtype":"hook_started","hook_id":"abc","hook_name":"SessionStart:startup","hook_event":"SessionStart","uuid":"def"}
+{"type":"system","subtype":"hook_completed","hook_id":"abc","hook_name":"SessionStart:startup","hook_event":"SessionStart","uuid":"def"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"here is the tailored content"}]}}
+{"type":"result","result":"{\"headline\":\"Senior Rust Dev\",\"summary\":\"Expert Rust developer.\",\"skills\":\"Rust, Go\"}","subtype":"success"}"#;
+        let result = parse_json_from_output(input).unwrap();
+        assert_eq!(result.headline, "Senior Rust Dev");
+        assert_eq!(result.skills, "Rust, Go");
     }
 
     #[test]

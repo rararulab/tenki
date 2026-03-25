@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
 
 use crate::{
-    agent::{CliBackend, CliExecutor},
+    agent::{self, CliBackend, CliExecutor},
     app_config,
     db::Database,
     error::{Result, TenkiError},
@@ -211,7 +211,8 @@ fn parse_json_from_output(
 ) -> std::result::Result<ScoreBreakdown, Box<dyn std::error::Error>> {
     // When the backend emits stream-json (NDJSON), extract the result text first
     // so that system/hook event lines don't confuse downstream parsing.
-    let effective = extract_result_from_stream_json(output).unwrap_or_else(|| output.to_string());
+    let effective =
+        agent::extract_result_from_stream_json(output).unwrap_or_else(|| output.to_string());
     let trimmed = effective.trim();
 
     // Try direct parse first
@@ -220,7 +221,7 @@ fn parse_json_from_output(
     }
 
     // Try extracting from markdown fences
-    if let Some(json_str) = extract_fenced_json(trimmed)
+    if let Some(json_str) = agent::extract_fenced_json(trimmed)
         && let Ok(v) = serde_json::from_str::<ScoreBreakdown>(json_str)
     {
         return Ok(v);
@@ -241,52 +242,6 @@ fn parse_json_from_output(
         &trimmed[..trimmed.len().min(200)]
     )
     .into())
-}
-
-/// Extract the final result text from Claude stream-json NDJSON output.
-///
-/// Stream-json output contains one JSON event per line. System/hook events
-/// (e.g. `{"type":"system","subtype":"hook_started",...}`) appear before the
-/// actual assistant response. The result lives in a line with
-/// `{"type":"result","result":"<text>"}`. Returns `None` if the output does
-/// not look like NDJSON stream-json.
-fn extract_result_from_stream_json(output: &str) -> Option<String> {
-    let mut found_stream_event = false;
-    for line in output.lines() {
-        let line = line.trim();
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
-            if v.get("type").and_then(serde_json::Value::as_str).is_some() {
-                found_stream_event = true;
-            }
-            if v.get("type").and_then(serde_json::Value::as_str) == Some("result") {
-                return v
-                    .get("result")
-                    .and_then(serde_json::Value::as_str)
-                    .map(String::from);
-            }
-        }
-    }
-    // If we saw stream events but no result line, return empty to avoid
-    // misinterpreting hook JSON as scoring output.
-    if found_stream_event {
-        Some(String::new())
-    } else {
-        None
-    }
-}
-
-/// Extract JSON content from markdown code fences.
-fn extract_fenced_json(text: &str) -> Option<&str> {
-    let start_markers = ["```json\n", "```json\r\n", "```\n", "```\r\n"];
-    for marker in &start_markers {
-        if let Some(start) = text.find(marker) {
-            let json_start = start + marker.len();
-            if let Some(end) = text[json_start..].find("```") {
-                return Some(text[json_start..json_start + end].trim());
-            }
-        }
-    }
-    None
 }
 
 /// Keyword-based scoring fallback when agent is unavailable.
@@ -433,15 +388,10 @@ mod tests {
 
     #[test]
     fn test_parse_stream_json_no_result_line() {
-        // Stream events present but no result line — should not misparse hook JSON
+        // Stream events present but no result line — falls back to raw output
+        // which is not valid ScoreBreakdown JSON, so parsing fails.
         let input = r#"{"type":"system","subtype":"hook_started","hook_id":"abc"}
 {"type":"system","subtype":"hook_completed","hook_id":"abc"}"#;
         assert!(parse_json_from_output(input).is_err());
-    }
-
-    #[test]
-    fn test_extract_result_from_stream_json_returns_none_for_plain_text() {
-        let input = "Just some plain text output with no NDJSON";
-        assert!(extract_result_from_stream_json(input).is_none());
     }
 }

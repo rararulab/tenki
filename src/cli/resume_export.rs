@@ -87,6 +87,14 @@ Edit the resume source files to match this job. Keep formatting intact. Be conci
         });
     }
 
+    // Verify the agent actually modified files before building
+    if !has_git_changes(repo) {
+        let _ = git_restore(repo);
+        return Err(TenkiError::BuildCommandFailed {
+            message: "agent produced no file changes in resume repo".to_string(),
+        });
+    }
+
     // Step 2: Run build command to generate PDF
     let build_output = std::process::Command::new("sh")
         .arg("-c")
@@ -117,6 +125,16 @@ Edit the resume source files to match this job. Keep formatting intact. Be conci
     git_restore(repo)?;
 
     Ok(())
+}
+
+/// Check whether the resume repo has uncommitted changes (i.e. the agent edited files).
+fn has_git_changes(repo: &Path) -> bool {
+    std::process::Command::new("git")
+        .args(["diff", "--stat"])
+        .current_dir(repo)
+        .output()
+        .map(|o| !o.stdout.is_empty())
+        .unwrap_or(false)
 }
 
 /// Restore the resume repo to a clean state via `git checkout .`.
