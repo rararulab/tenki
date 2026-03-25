@@ -43,7 +43,7 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let db = db::Database::open_default().await?;
 
-    if !matches!(cli.command, Command::Init) {
+    if !matches!(cli.command, Command::Init | Command::Doctor { .. }) {
         db.ensure_initialized().await?;
         db.migrate_sqlx().await?;
     }
@@ -123,6 +123,11 @@ async fn run() -> std::result::Result<(), Box<dyn std::error::Error>> {
             cli::stats::timeline(&db, &id, json).await?;
         }
         Command::Pipeline(cmd) => handle_pipeline(&db, cmd).await?,
+        Command::Doctor { json } => {
+            if !cli::doctor::run(json) {
+                std::process::exit(1);
+            }
+        }
         Command::Config { action } => handle_config(action)?,
     }
 
