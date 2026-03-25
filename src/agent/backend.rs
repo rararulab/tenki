@@ -170,7 +170,7 @@ impl CliBackend {
     fn codex() -> Self {
         Self {
             command:       "codex".to_string(),
-            args:          vec!["exec".to_string(), "--yolo".to_string()],
+            args:          vec!["exec".to_string(), "--full-auto".to_string()],
             prompt_mode:   PromptMode::Arg,
             prompt_flag:   None,
             output_format: OutputFormat::Text,
