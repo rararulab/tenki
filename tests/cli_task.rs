@@ -101,7 +101,18 @@ fn task_update_reflected_in_list() {
         ])
         .output()
         .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+    assert!(
+        out.status.success(),
+        "task add failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap_or_else(|e| {
+        panic!(
+            "parse: {e}\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        )
+    });
     let tid = &v["id"].as_str().expect("id")[..8];
 
     // Update title and add notes
