@@ -4,30 +4,20 @@ use predicates::prelude::*;
 #[test]
 fn interview_lifecycle() {
     let tmp = common::tenki_initialized();
-    // Add app
-    let out = common::tenki_with(&tmp)
-        .args(["app", "add", "--company", "X", "--position", "Y", "--json"])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
-    let app_id = &v["id"].as_str().expect("id")[..8];
+    let app_id = common::add_test_app(&tmp);
 
     // Add interview
-    let out = common::tenki_with(&tmp)
-        .args([
-            "interview",
-            "add",
-            "--app-id",
-            app_id,
-            "--round",
-            "1",
-            "--type",
-            "technical",
-            "--json",
-        ])
-        .output()
-        .expect("run");
-    let v: serde_json::Value = serde_json::from_slice(&out.stdout).expect("parse");
+    let v = common::run_json(common::tenki_with(&tmp).args([
+        "interview",
+        "add",
+        "--app-id",
+        &app_id,
+        "--round",
+        "1",
+        "--type",
+        "technical",
+        "--json",
+    ]));
     let iid = &v["id"].as_str().expect("id")[..8];
 
     // Update
@@ -53,7 +43,7 @@ fn interview_lifecycle() {
 
     // List
     common::tenki_with(&tmp)
-        .args(["interview", "list", app_id, "--json"])
+        .args(["interview", "list", &app_id, "--json"])
         .assert()
         .success()
         .stdout(predicate::str::contains("completed"));

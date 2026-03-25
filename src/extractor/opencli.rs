@@ -149,6 +149,13 @@ fn build_search_args(source: &str, params: &DiscoverParams) -> Vec<String> {
         "json".to_string(),
     ];
 
+    // LinkedIn supports --details to fetch full job description text,
+    // required for downstream scoring and tailoring.
+    if source == "linkedin" {
+        args.push("--details".to_string());
+        args.push("true".to_string());
+    }
+
     if let Some(loc) = &params.location {
         let normalized_location = normalize_location_for_source(source, loc);
         match source {
@@ -323,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_linkedin_json() {
+    fn parse_linkedin_json_with_description() {
         let json = r#"[
             {
                 "title": "Backend Engineer",
@@ -331,7 +338,8 @@ mod tests {
                 "url": "https://linkedin.com/jobs/456",
                 "location": "Remote",
                 "salary": "$180-220K",
-                "listed": "1 day ago"
+                "listed": "1 day ago",
+                "description": "We are looking for a Backend Engineer with Rust experience."
             }
         ]"#;
         let raw: Vec<RawOpenCliJob> = serde_json::from_str(json).unwrap();
@@ -346,6 +354,10 @@ mod tests {
         assert_eq!(jobs[0].source, "linkedin");
         assert_eq!(jobs[0].location.as_deref(), Some("Remote"));
         assert_eq!(jobs[0].posted_at.as_deref(), Some("1 day ago"));
+        assert_eq!(
+            jobs[0].jd_text.as_deref(),
+            Some("We are looking for a Backend Engineer with Rust experience.")
+        );
         assert_eq!(
             jobs[0].jd_url.as_deref(),
             Some("https://linkedin.com/jobs/456")
@@ -385,6 +397,20 @@ mod tests {
             normalize_query_for_source("linkedin", "python llm"),
             "python llm"
         );
+    }
+
+    #[test]
+    fn linkedin_includes_details_flag() {
+        let params = DiscoverParams::builder().query("rust".to_string()).build();
+        let args = build_search_args("linkedin", &params);
+        assert!(args.windows(2).any(|w| w == ["--details", "true"]));
+    }
+
+    #[test]
+    fn boss_does_not_include_details_flag() {
+        let params = DiscoverParams::builder().query("rust".to_string()).build();
+        let args = build_search_args("boss", &params);
+        assert!(!args.iter().any(|a| a == "--details"));
     }
 
     #[test]
