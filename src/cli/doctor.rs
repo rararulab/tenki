@@ -17,16 +17,16 @@ enum Severity {
 /// Result of a single doctor check.
 #[derive(Debug, Serialize)]
 struct CheckResult {
-    name:     &'static str,
+    name: &'static str,
     severity: Severity,
-    passed:   bool,
-    message:  String,
+    passed: bool,
+    message: String,
 }
 
 /// Aggregated doctor report.
 #[derive(Debug, Serialize)]
 struct DoctorReport {
-    ok:     bool,
+    ok: bool,
     action: &'static str,
     checks: Vec<CheckResult>,
 }
@@ -34,14 +34,14 @@ struct DoctorReport {
 /// Run all doctor checks and report results.
 pub fn run(json: bool) -> bool {
     let cfg = app_config::load();
-    let mut checks = Vec::new();
-
-    checks.push(check_config_file());
-    checks.push(check_database());
-    checks.push(check_agent_backend(cfg));
-    checks.push(check_opencli());
-    checks.push(check_resume_config(cfg));
-    checks.push(check_preferences(cfg));
+    let checks = vec![
+        check_config_file(),
+        check_database(),
+        check_agent_backend(cfg),
+        check_opencli(),
+        check_resume_config(cfg),
+        check_preferences(cfg),
+    ];
 
     let all_critical_pass = checks
         .iter()
@@ -50,7 +50,7 @@ pub fn run(json: bool) -> bool {
 
     if json {
         let report = DoctorReport {
-            ok:     all_critical_pass,
+            ok: all_critical_pass,
             action: "doctor",
             checks,
         };
@@ -85,10 +85,10 @@ fn check_config_file() -> CheckResult {
     let path = crate::paths::config_file();
     let exists = path.exists();
     CheckResult {
-        name:     "config_file",
+        name: "config_file",
         severity: Severity::Warning,
-        passed:   exists,
-        message:  if exists {
+        passed: exists,
+        message: if exists {
             format!("{}", path.display())
         } else {
             format!("{} not found — using defaults", path.display())
@@ -101,10 +101,10 @@ fn check_database() -> CheckResult {
     let path = crate::paths::db_path();
     let exists = path.exists();
     CheckResult {
-        name:     "database",
+        name: "database",
         severity: Severity::Critical,
-        passed:   exists,
-        message:  if exists {
+        passed: exists,
+        message: if exists {
             format!("{}", path.display())
         } else {
             format!("{} not found — run `tenki init`", path.display())
@@ -117,18 +117,15 @@ fn check_agent_backend(cfg: &app_config::AppConfig) -> CheckResult {
     let backend = &cfg.agent.backend;
     let binary = resolve_agent_binary(backend, cfg.agent.command.as_deref());
 
-    let found = which_binary(&binary);
+    let found = which_binary(binary);
     CheckResult {
-        name:     "agent_backend",
+        name: "agent_backend",
         severity: Severity::Critical,
-        passed:   found,
-        message:  if found {
+        passed: found,
+        message: if found {
             format!("{backend} ({binary})")
         } else {
-            format!(
-                "{backend} — `{binary}` not found on PATH. Install it or change \
-                 `agent.backend`."
-            )
+            format!("{backend} — `{binary}` not found on PATH. Install it or change `agent.backend`.")
         },
     }
 }
@@ -156,10 +153,10 @@ fn resolve_agent_binary<'a>(backend: &'a str, command_override: Option<&'a str>)
 fn check_opencli() -> CheckResult {
     let found = which_binary("opencli");
     CheckResult {
-        name:     "opencli",
+        name: "opencli",
         severity: Severity::Critical,
-        passed:   found,
-        message:  if found {
+        passed: found,
+        message: if found {
             "opencli found".to_string()
         } else {
             "`opencli` not found on PATH — required for `tenki discover`".to_string()
@@ -183,10 +180,10 @@ fn check_resume_config(cfg: &app_config::AppConfig) -> CheckResult {
 
     let passed = missing.is_empty();
     CheckResult {
-        name:     "resume_config",
+        name: "resume_config",
         severity: Severity::Warning,
         passed,
-        message:  if passed {
+        message: if passed {
             format!("repo={}", r.repo_path.as_deref().unwrap_or(""))
         } else {
             format!("missing: {} — needed for resume export", missing.join(", "))
@@ -210,10 +207,10 @@ fn check_preferences(cfg: &app_config::AppConfig) -> CheckResult {
 
     let passed = missing.is_empty();
     CheckResult {
-        name:     "preferences",
+        name: "preferences",
         severity: Severity::Warning,
         passed,
-        message:  if passed {
+        message: if passed {
             format!(
                 "query={} location={} sources={}",
                 p.query.as_deref().unwrap_or(""),
