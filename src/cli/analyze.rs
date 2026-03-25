@@ -15,32 +15,32 @@ use crate::{
 /// Analysis result returned to the caller.
 #[derive(Debug, Serialize)]
 struct AnalysisResult {
-    ok: bool,
-    action: &'static str,
-    id: String,
-    score: f64,
-    method: String,
+    ok:        bool,
+    action:    &'static str,
+    id:        String,
+    score:     f64,
+    method:    String,
     breakdown: serde_json::Value,
-    notes: String,
+    notes:     String,
 }
 
 /// Score breakdown from the LLM (5-criteria model).
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct ScoreBreakdown {
     #[serde(default)]
-    skills: f64,
+    skills:     f64,
     #[serde(default)]
     experience: f64,
     #[serde(default)]
-    location: f64,
+    location:   f64,
     #[serde(default)]
-    domain: f64,
+    domain:     f64,
     #[serde(default)]
-    growth: f64,
+    growth:     f64,
     #[serde(default)]
-    total: f64,
+    total:      f64,
     #[serde(default)]
-    notes: String,
+    notes:      String,
 }
 
 /// Run the analyze command for a given application.
@@ -303,13 +303,13 @@ fn keyword_scoring(jd_text: &str, skills: Option<&str>) -> (f64, ScoreBreakdown)
 
     if skill_list.is_empty() {
         let breakdown = ScoreBreakdown {
-            skills: 0.0,
+            skills:     0.0,
             experience: 12.0,
-            location: 8.0,
-            domain: 8.0,
-            growth: 8.0,
-            total: 36.0,
-            notes: "No candidate skills provided — baseline score only".to_string(),
+            location:   8.0,
+            domain:     8.0,
+            growth:     8.0,
+            total:      36.0,
+            notes:      "No candidate skills provided — baseline score only".to_string(),
         };
         return (36.0, breakdown);
     }
